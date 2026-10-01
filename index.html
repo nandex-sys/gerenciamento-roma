@@ -1612,7 +1612,7 @@
 
         function enviarWhatsApp() { const texto = document.getElementById('wppTexto').value; let fone = clienteSelecionadoWpp.telefone; let url = fone && fone.length >= 10 ? `https://wa.me/${!fone.startsWith("55") ? "55" + fone : fone}?text=${encodeURIComponent(texto)}` : `https://wa.me/?text=${encodeURIComponent(texto)}`; window.open(url, '_blank'); }
         // ==========================================
-        // GESTÃO, SINCRONIZAÇÃO E ALTERNÂNCIA DE MÊS
+        // GESTÃO, SINCRONIZAÇÃO E RESET DO MÊS
         // ==========================================
         function alternarMes(mes) {
             mesSelecionado = mes;
@@ -1621,16 +1621,14 @@
             const btnMesR2 = document.getElementById('btnMesSelecionadoR2');
             if (btnMesR2) btnMesR2.innerText = mes;
 
-            // Força a sincronização de todos os clientes cadastrados ao mudar de mês
             sincronizarClientesDoMes();
-
             fecharModal('modalMes');
-            renderizarLista();
+            if (typeof renderizarLista === 'function') renderizarLista();
         }
 
-        // Garante que TODOS os clientes do banco/memória fiquem disponíveis no mês selecionado
+        // Garante que TODOS os clientes tenham registro no mês selecionado
         function sincronizarClientesDoMes() {
-            if (!Array.isArray(clientes)) return;
+            if (typeof clientes === 'undefined' || !Array.isArray(clientes)) return;
 
             clientes.forEach(c => {
                 if (!c.status) c.status = 'Pendente';
@@ -1648,18 +1646,58 @@
             if (typeof salvarDados === 'function') salvarDados();
         }
 
-        // Botão de emergência para FORÇAR a puxada dos clientes de Setembro/meses anteriores para Outubro
-        function resetarEGerarMesAtual() {
-            const mesNome = typeof mesSelecionado !== 'undefined' ? mesSelecionado : 'atual';
-            if (!confirm(`Deseja sincronizar e recarregar TODOS os clientes no mês de ${mesNome}?`)) {
+        // FORÇA o reset do mês selecionado recarregando TODOS os clientes do sistema
+        function resetarEForcarSincronizacaoMes() {
+            const mesAtual = (typeof mesSelecionado !== 'undefined' && mesSelecionado) ? mesSelecionado : 'Outubro';
+            
+            if (!confirm(`Deseja resetar e puxar TODOS os clientes cadastrados para o mês de ${mesAtual}?`)) {
                 return;
             }
 
-            sincronizarClientesDoMes();
+            if (typeof clientes !== 'undefined' && Array.isArray(clientes)) {
+                clientes.forEach(c => {
+                    if (!c.historico) c.historico = {};
+                    
+                    // Recria/sobrescreve forçadamente o mês atual para garantir que o cliente apareça
+                    c.historico[mesAtual] = {
+                        status: 'Pendente',
+                        valor: c.valor || '100,00',
+                        log: ''
+                    };
+                    c.status = 'Pendente';
+                });
 
-            if (typeof salvarDados === 'function') salvarDados();
+                if (typeof salvarDados === 'function') salvarDados();
+                if (typeof renderizarLista === 'function') renderizarLista();
+                alert(`Mês de ${mesAtual} resetado com sucesso! Todos os clientes foram puxados.`);
+            } else {
+                alert('Nenhum cliente encontrado na memória.');
+            }
+        }
+
+        // Injeta o botão vermelho de Reset automaticamente no canto inferior esquerdo da tela
+        function injetarBotaoResetNaTela() {
+            if (document.getElementById('btnResetMesJS')) return;
+
+            const btn = document.createElement('button');
+            btn.id = 'btnResetMesJS';
+            btn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> Resetar Mês Atual';
+            btn.style.cssText = 'position: fixed; bottom: 15px; left: 15px; z-index: 99999; background: #e74c3c; color: white; border: none; padding: 10px 14px; border-radius: 8px; font-weight: bold; font-size: 0.85rem; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3);';
+            btn.onclick = resetarEForcarSincronizacaoMes;
+            
+            document.body.appendChild(btn);
+        }
+
+        // Executa automaticamente a injeção do botão e a sincronização
+        window.addEventListener('DOMContentLoaded', function() {
+            sincronizarClientesDoMes();
+            injetarBotaoResetNaTela();
             if (typeof renderizarLista === 'function') renderizarLista();
-            alert(`Mês de ${mesNome} sincronizado com sucesso! Todos os clientes foram puxados.`);
+        });
+
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            sincronizarClientesDoMes();
+            injetarBotaoResetNaTela();
         }
 
         // ==========================================
