@@ -1611,8 +1611,70 @@
         }
 
         function enviarWhatsApp() { const texto = document.getElementById('wppTexto').value; let fone = clienteSelecionadoWpp.telefone; let url = fone && fone.length >= 10 ? `https://wa.me/${!fone.startsWith("55") ? "55" + fone : fone}?text=${encodeURIComponent(texto)}` : `https://wa.me/?text=${encodeURIComponent(texto)}`; window.open(url, '_blank'); }
-        function fecharModal(id) { document.getElementById(id).style.display = 'none'; }
-        window.onclick = function(event) { if (event.target.className === 'modal-overlay') event.target.style.display = 'none'; }
+        // ==========================================
+        // GESTÃO, SINCRONIZAÇÃO E ALTERNÂNCIA DE MÊS
+        // ==========================================
+        function alternarMes(mes) {
+            mesSelecionado = mes;
+            const btnMes = document.getElementById('btnMesSelecionado');
+            if (btnMes) btnMes.innerText = mes;
+            const btnMesR2 = document.getElementById('btnMesSelecionadoR2');
+            if (btnMesR2) btnMesR2.innerText = mes;
+
+            // Força a sincronização de todos os clientes cadastrados ao mudar de mês
+            sincronizarClientesDoMes();
+
+            fecharModal('modalMes');
+            renderizarLista();
+        }
+
+        // Garante que TODOS os clientes do banco/memória fiquem disponíveis no mês selecionado
+        function sincronizarClientesDoMes() {
+            if (!Array.isArray(clientes)) return;
+
+            clientes.forEach(c => {
+                if (!c.status) c.status = 'Pendente';
+                if (!c.historico) c.historico = {};
+                
+                if (typeof mesSelecionado !== 'undefined' && mesSelecionado && !c.historico[mesSelecionado]) {
+                    c.historico[mesSelecionado] = {
+                        status: 'Pendente',
+                        valor: c.valor || '100,00',
+                        log: ''
+                    };
+                }
+            });
+
+            if (typeof salvarDados === 'function') salvarDados();
+        }
+
+        // Botão de emergência para FORÇAR a puxada dos clientes de Setembro/meses anteriores para Outubro
+        function resetarEGerarMesAtual() {
+            const mesNome = typeof mesSelecionado !== 'undefined' ? mesSelecionado : 'atual';
+            if (!confirm(`Deseja sincronizar e recarregar TODOS os clientes no mês de ${mesNome}?`)) {
+                return;
+            }
+
+            sincronizarClientesDoMes();
+
+            if (typeof salvarDados === 'function') salvarDados();
+            if (typeof renderizarLista === 'function') renderizarLista();
+            alert(`Mês de ${mesNome} sincronizado com sucesso! Todos os clientes foram puxados.`);
+        }
+
+        // ==========================================
+        // FECHAMENTO DE MODAIS E EVENTOS
+        // ==========================================
+        function fecharModal(id) { 
+            const modal = document.getElementById(id);
+            if (modal) modal.style.display = 'none'; 
+        }
+
+        window.onclick = function(event) { 
+            if (event && event.target && event.target.className === 'modal-overlay') {
+                event.target.style.display = 'none'; 
+            }
+        };
     </script>
 </body>
 </html>
