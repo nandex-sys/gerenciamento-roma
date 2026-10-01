@@ -1,0 +1,1580 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Roma Telecom Premium Nuvem</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Biblioteca de Ícones Premium (FontAwesome) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    
+    <!-- Bibliotecas do Firebase, Imagem, PDF e Gráficos (Chart.js) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --primary: #5A4FCF;
+            --dark: #1E1E1E;
+            --bg: #F0F2F5;
+            --card: #FFFFFF;
+            --text-main: #333333;
+            --text-muted: #888888;
+            --input-bg: #F9FAFB;
+            --border-color: #E0E4E8;
+            --whatsapp: #25D366;
+            --pago: #10B981;
+            --pendente: #F59E0B;
+            --vencido: #EF4444; 
+            --bloqueado: #000000;
+            --isento: #9CA3AF;
+            --cancelado: #7F1D1D;
+            --app-color: #8B5CF6; 
+            --metrics: #10B981;
+            --roma-orange: #F39C12;
+            --border-radius: 16px;
+        }
+
+        /* MODO ESCURO GERAL */
+        body.dark-mode {
+            --bg: #111827;
+            --card: #1F2937;
+            --text-main: #F9FAFB;
+            --text-muted: #9CA3AF;
+            --dark: #374151;
+            --input-bg: #374151;
+            --border-color: #4B5563;
+            --bloqueado: #111827;
+        }
+        body.dark-mode .modal-content { background: var(--card); }
+        body.dark-mode .card.vencido { background-color: #451a1a; }
+        body.dark-mode .card.bloqueado { background-color: #2a2a2a; border-left-color: #000000;}
+        body.dark-mode .metrics-card { background: #374151; }
+        body.dark-mode .card-price { color: #FFFFFF; } 
+
+        /* TEMA ROMA PREMIUM */
+        body.layout-roma2 {
+            --bg: #10121C;
+            --card: #1C1D2F;
+            --text-main: #FFFFFF;
+            --text-muted: #8A8DAB;
+            --primary: #5A4FCF;
+            --r2-green: #059669;
+            --r2-green-light: #34D399;
+            --r2-red: #E11D48;
+            --r2-orange: #F59E0B;
+            --border-color: #2A2C40;
+            background-color: var(--bg);
+            color: var(--text-main);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg); color: var(--text-main); transition: 0.3s; }
+        
+        .login-container { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; background: var(--bg); }
+        .login-logo { width: 180px; margin-bottom: 30px; border-radius: 16px;}
+        .login-container h2 { margin-bottom: 20px; color: var(--text-main); font-weight: 800; font-size: 22px; }
+        .btn-esqueci { background: transparent; color: var(--primary); border: none; font-weight: 600; margin-top: 15px; cursor: pointer; text-decoration: underline; font-size: 14px;}
+        
+        #app-content { display: none; padding-bottom: 120px; }
+
+        /* HEADER DASHBOARD (Padrão) */
+        .topbar { background-color: var(--dark); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .topbar h1 { font-size: 18px; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 8px;}
+        .star-icon { color: var(--roma-orange); font-size: 20px; }
+        .topbar-actions { display: flex; gap: 6px; }
+        .topbar-btn { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 8px 10px; border-radius: 12px; font-weight: 700; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        
+        .top-dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 20px 15px 5px 15px; animation: fadeIn 0.4s; }
+        .dash-box { border-radius: 20px; padding: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); display: flex; flex-direction: column; justify-content: space-between; min-height: 110px; position: relative; overflow: hidden; border: none; }
+        .dash-box::after { content: ''; position: absolute; right: -20px; top: -20px; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border-radius: 50%; }
+        .dash-box.total { grid-column: span 2; background: linear-gradient(135deg, #064E3B, #0F766E); color: white; min-height: 125px; }
+        .dash-box.pago { background: linear-gradient(135deg, #10B981, #059669); color: white; }
+        .dash-box.pendente { background: linear-gradient(135deg, #F59E0B, #D97706); color: white; } 
+        .dash-title { font-size: 13px; font-weight: 600; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.5px; z-index: 2; }
+        .dash-value { font-size: 24px; font-weight: 800; margin-top: 8px; z-index: 2; position: relative; transition: filter 0.3s ease, opacity 0.3s ease;}
+        .dash-box.total .dash-value { font-size: 32px; }
+
+        .search-area-nova { padding: 5px 15px 10px 15px; display: flex; gap: 8px; align-items: center; overflow-x: auto;}
+        .search-input-wrapper { flex: 1; position: relative; min-width: 140px;}
+        .search-input-wrapper input { width: 100%; padding: 12px 15px 12px 35px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--card); color: var(--text-main); font-size: 13px; outline: none; }
+        .search-icon { position: absolute; left: 12px; top: 12px; color: var(--text-muted); }
+        .btn-filtro-novo { background: var(--card); border: 1px solid var(--border-color); color: var(--text-muted); border-radius: 12px; padding: 10px 12px; font-weight: 700; font-size: 12px; cursor: pointer; transition: 0.2s; white-space: nowrap; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.02);}
+        .btn-filtro-novo.active-pendente { background: var(--pendente); color: white; border-color: var(--pendente); box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3); }
+        .btn-filtro-novo.active-pago { background: var(--pago); color: white; border-color: var(--pago); box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); }
+
+        .tabs { display: flex; padding: 0 15px 10px 15px; gap: 10px; }
+        .tab-btn { flex: 1; background: var(--card); color: var(--text-muted); border: 1px solid var(--border-color); padding: 12px; border-radius: 25px; font-weight: 600; font-size: 13px; cursor: pointer; transition: 0.3s; }
+        .tab-btn.active { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 4px 10px rgba(90, 79, 207, 0.3); }
+        
+        .tab-app-badge { display: inline-flex; align-items: center; gap: 3px; background: var(--app-color); color: white; padding: 2px 6px; border-radius: 8px; font-size: 10px; font-weight: 700; margin-left: 6px; vertical-align: middle; }
+
+        /* CARTÃO DE CLIENTE - LAYOUT DASHBOARD */
+        .list-container { padding: 0 15px; }
+        .card { background: var(--card); border-radius: var(--border-radius); padding: 15px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; align-items: stretch; justify-content: space-between; border-left: 4px solid #ccc; transition: 0.2s; }
+        
+        .card.pendente { border-left-color: var(--pendente); }
+        .card.pago { border-left-color: var(--pago); }
+        .card.vencido { border-left-color: var(--vencido); }
+        .card.bloqueado { border-left-color: var(--bloqueado); opacity: 0.85; }
+        .card.isento { border-left-color: var(--isento); opacity: 0.7; }
+        .card.cancelado { border-left-color: var(--cancelado); opacity: 0.6; background-color: rgba(127, 29, 29, 0.05); }
+        
+        .card-left { display: flex; align-items: flex-start; gap: 12px; width: 100%; overflow: hidden; flex: 1; }
+        .date-badge { width: 45px; height: 45px; border-radius: 12px; background: rgba(136, 136, 136, 0.1); color: var(--text-main); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; flex-shrink: 0;}
+        .info { width: 100%; overflow: hidden; }
+        .info h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+        .info p { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-top: 5px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px;}
+        
+        .card-right { display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; flex-shrink: 0; padding-left: 10px; }
+        .card-price { font-size: 18px; font-weight: 800; color: var(--primary); margin-bottom: 8px; text-align: right; }
+        
+        .plano-badge { font-size: 10px; padding: 3px 8px; border-radius: 8px; font-weight: 700; color: white; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);}
+        .badge-basico { background: linear-gradient(135deg, #3B82F6, #2563EB); }
+        .badge-premium { background: linear-gradient(135deg, #8B5CF6, #6366F1); }
+        .badge-gold { background: linear-gradient(135deg, #F59E0B, #D97706); }
+        .badge-diamante { background: linear-gradient(135deg, #06B6D4, #0891B2); }
+        .badge-default { background: var(--text-muted); }
+
+        .log-pagamento { font-size: 11px; color: var(--metrics); margin-top: 4px; font-weight: 600; }
+        .log-parcial { color: var(--pendente); } 
+        .log-bloqueio { color: var(--vencido); }
+        .log-isento { color: var(--text-muted); }
+        
+        .status-badge { display: inline-block; padding: 4px 8px; border-radius: 8px; font-size: 11px; font-weight: 700; color: white; cursor: pointer; user-select: none; margin-bottom: 4px; }
+        .status-badge.pendente { background-color: var(--pendente); }
+        .status-badge.pago { background-color: var(--pago); }
+        .status-badge.vencido { background-color: var(--vencido); }
+        .status-badge.bloqueado { background-color: var(--bloqueado); }
+        .status-badge.isento { background-color: var(--isento); }
+        .status-badge.cancelado { background-color: var(--cancelado); }
+        .app-badge { display: inline-block; padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: 700; background-color: var(--app-color); color: white; margin-left: 6px; vertical-align: top; }
+
+        .actions { display: flex; gap: 6px; }
+        .action-btn { width: 36px; height: 36px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; transition: 0.2s;}
+        .action-btn:active { transform: scale(0.9); }
+        .action-btn i { font-size: 16px; }
+        .btn-wpp { background: rgba(37, 211, 102, 0.15); color: var(--whatsapp); }
+        .btn-wpp i { font-size: 18px; }
+        .btn-edit { background: rgba(243, 156, 18, 0.15); color: var(--roma-orange); }
+        .btn-pdf { background: rgba(225, 29, 72, 0.15); color: var(--vencido); }
+
+        .fab { position: fixed; bottom: 100px; right: 20px; width: 56px; height: 56px; border-radius: 50%; background: var(--primary); color: white; border: none; box-shadow: 0 4px 15px rgba(90, 79, 207, 0.4); cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 90; transition: 0.2s;}
+        .fab i { font-size: 24px; }
+        .fab:active { transform: scale(0.9); }
+
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--card); padding: 10px 0 25px 0; display: flex; justify-content: space-around; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 40; border-top-left-radius: 20px; border-top-right-radius: 20px; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--text-muted); font-size: 11px; font-weight: 600; gap: 4px; cursor: pointer;}
+        .nav-item.active { color: var(--primary); }
+        .nav-icon { font-size: 20px; }
+
+        /* HEADER ROMA PREMIUM */
+        #header-roma2 { display: none; padding: 15px; animation: fadeIn 0.4s; }
+        .r2-top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .r2-brand-area { display: flex; align-items: center; gap: 8px; }
+        .r2-logo-icon { width: 35px; height: 35px; background: linear-gradient(135deg, #6366F1, #8B5CF6); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: white; }
+        .r2-brand-info h3 { font-size: 15px; font-weight: 800; color: white; }
+        
+        .r2-top-actions { display: flex; gap: 5px; }
+        .r2-top-btn { background: rgba(255,255,255,0.08); color: white; border: 1px solid rgba(255,255,255,0.15); padding: 8px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: 0.2s; }
+        
+        .r2-dash { background: linear-gradient(145deg, #2D2760, #1D1E3A); padding: 20px; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); position: relative; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.05); }
+        .r2-dash-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .r2-dash-header span { font-size: 12px; color: rgba(255,255,255,0.7); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+        .r2-val-area { position: relative; margin-bottom: 20px; }
+        .r2-val-area h1 { font-size: 36px; font-weight: 800; color: white; margin: 0; transition: filter 0.3s; }
+        .r2-progress-bg { height: 8px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; margin-bottom: 15px; margin-top: 15px;}
+        .r2-progress-fill { height: 100%; background: var(--r2-green-light); border-radius: 10px; width: 0%; transition: 1s ease-out; }
+        .r2-dash-metrics { display: flex; justify-content: space-between; }
+        .r2-metric-pill { background: rgba(0,0,0,0.2); padding: 8px 15px; border-radius: 20px; display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.8); }
+        .r2-metric-pill strong { color: white; font-size: 14px; margin-left: 4px; }
+        .r2-dot.green { width: 8px; height: 8px; background: var(--r2-green-light); border-radius: 50%; }
+        .r2-dot.red { width: 8px; height: 8px; background: var(--r2-red); border-radius: 50%; }
+
+        .r2-section-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .r2-section-title h3 { font-size: 14px; font-weight: 800; display: flex; align-items: center; gap: 6px; text-transform: uppercase; color: var(--text-main); }
+        
+        .r2-filters { display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px; }
+        .r2-filter-btn { background: var(--card); border: 1px solid var(--border-color); color: var(--text-muted); padding: 10px 18px; border-radius: 20px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: 0.2s; }
+        .r2-filter-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+        .r2-client-card { background: var(--card); border-radius: 20px; padding: 15px; margin-bottom: 15px; border: 1px solid var(--border-color); position: relative; transition: 0.2s;}
+        .r2-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; }
+        .r2-c-left { display: flex; gap: 12px; }
+        .r2-avatar { width: 45px; height: 45px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; color: var(--text-muted); }
+        .r2-c-info h4 { font-size: 15px; font-weight: 700; margin-bottom: 4px; color: var(--text-main); }
+        .r2-c-info p { font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; }
+        .r2-c-right { text-align: right; }
+        .r2-c-right h3 { font-size: 16px; font-weight: 800; color: var(--text-main); margin-bottom: 6px; }
+        
+        .r2-badge { display: inline-block; padding: 4px 10px; border-radius: 10px; font-size: 10px; font-weight: 800; color: white; cursor: pointer; }
+        .r2-badge.pago { background: rgba(16, 185, 129, 0.15); color: var(--r2-green-light); border: 1px solid rgba(16, 185, 129, 0.3); }
+        .r2-badge.pendente { background: rgba(245, 158, 11, 0.15); color: var(--r2-orange); border: 1px solid rgba(245, 158, 11, 0.3); }
+        .r2-badge.vencido { background: rgba(225, 29, 72, 0.15); color: var(--r2-red); border: 1px solid rgba(225, 29, 72, 0.3); }
+        .r2-badge.bloqueado { background: #000; color: #FFF; border: 1px solid #333; }
+        .r2-badge.isento { background: rgba(156, 163, 175, 0.15); color: #9CA3AF; border: 1px solid rgba(156, 163, 175, 0.3); }
+        .r2-badge.cancelado { background: rgba(127, 29, 29, 0.2); color: #F87171; border: 1px solid rgba(127, 29, 29, 0.5); }
+        
+        .r2-divida-badge { background: var(--r2-red); color: white; padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: 800; display: inline-block; margin-top: 5px; cursor: pointer; }
+        
+        .r2-card-bottom { display: flex; justify-content: flex-start; align-items: center; border-top: 1px solid var(--border-color); padding-top: 12px; margin-top: 10px; flex-wrap: wrap; gap: 8px; }
+        .r2-btn-action { background: transparent; border: none; color: var(--text-muted); font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 4px; cursor: pointer; transition: 0.2s; }
+        
+        .r2-btn-action.wpp { color: var(--r2-green-light); background: rgba(52, 211, 153, 0.1); padding: 6px 10px; border-radius: 8px; }
+        .r2-btn-action.pdf { color: var(--r2-red); background: rgba(225, 29, 72, 0.1); padding: 6px 10px; border-radius: 8px; }
+        .r2-btn-action.ia { color: var(--roma-orange); background: rgba(243, 156, 18, 0.1); padding: 6px 10px; border-radius: 8px; }
+        .r2-btn-action.del { padding: 6px 10px; border: 1px solid var(--border-color); border-radius: 8px;}
+        
+        .r2-bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--card); padding: 12px 0 25px 0; display: none; justify-content: space-around; border-top: 1px solid var(--border-color); z-index: 40; }
+        .r2-nav-item { display: flex; flex-direction: column; align-items: center; color: var(--text-muted); font-size: 10px; font-weight: 600; gap: 4px; cursor: pointer;}
+        .r2-nav-item.active { color: var(--primary); }
+        .r2-nav-item .icon { font-size: 20px; }
+
+        /* PRIVACIDADE E MODAIS */
+        .blur-active { filter: blur(7px); opacity: 0.8; user-select: none; }
+        .eye-btn { position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.2); border: none; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; z-index: 10; transition: 0.2s; color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(3px); z-index: 100; align-items: flex-end; justify-content: center; padding-bottom: 20px;}
+        .modal-content { background: var(--card); width: 100%; border-radius: 24px; padding: 25px 20px; animation: slideUp 0.3s ease-out; max-height: 90vh; overflow-y: auto;}
+        
+        .modal-recibo-full { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 200; flex-direction: column; align-items: center; justify-content: flex-start; padding: 0; animation: fadeIn 0.3s; }
+        .pdf-actions-bar { display: flex; gap: 10px; padding: 20px; width: 100%; max-width: 400px; background: var(--card); box-shadow: 0 4px 10px rgba(0,0,0,0.05); z-index: 10;}
+        .btn-pdf-share { background: var(--whatsapp); color: white; border: none; padding: 14px; border-radius: 12px; font-weight: 700; cursor: pointer; flex: 1; display:flex; align-items:center; justify-content:center; gap:6px; font-size: 14px;}
+        .btn-pdf-down { background: var(--vencido); color: white; border: none; padding: 14px; border-radius: 12px; font-weight: 700; cursor: pointer; flex: 1; display:flex; align-items:center; justify-content:center; gap:6px; font-size: 14px;}
+        .btn-fechar-print { padding: 15px; background: transparent; border: 2px solid var(--text-muted); color: var(--text-muted); border-radius: 12px; font-weight: 700; cursor: pointer; width: 100%; margin: 15px 0;}
+        
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-header h2 { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; color: var(--text-main); }
+        .close-btn { background: none; border: none; font-size: 24px; color: var(--text-muted); cursor: pointer; margin-top: -10px; }
+
+        .input-group { margin-bottom: 15px; width: 100%; }
+        .input-group input, .wpp-textarea, select { width: 100%; padding: 14px; border: 1px solid var(--border-color); border-radius: 12px; font-size: 14px; outline: none; background: var(--input-bg); color: var(--text-main); transition: 0.2s; }
+        .input-group input:focus, .wpp-textarea:focus, select:focus { border-color: var(--primary); }
+        
+        .layout-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 10px; }
+        .layout-btn { background: var(--input-bg); border: 2px solid var(--border-color); padding: 15px; border-radius: 16px; text-align: left; cursor: pointer; transition: 0.2s; color: var(--text-main); font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 15px; user-select: none; justify-content: flex-start; }
+        .layout-btn .icon { font-size: 28px; width: 40px; text-align: center; }
+        .layout-btn span { font-size: 11px; color: var(--text-muted); font-weight: 600; display: block; margin-top: 2px;}
+        .layout-btn.active { border-color: var(--primary); background: rgba(90, 79, 207, 0.05); }
+        body.dark-mode .layout-btn.active { background: rgba(90, 79, 207, 0.15); }
+
+        .meses-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 10px; margin-bottom: 20px; }
+        .mes-btn { padding: 16px 10px; border: 1px solid var(--border-color); background: var(--input-bg); border-radius: 12px; font-size: 13px; font-weight: 700; color: var(--text-main); cursor: pointer; transition: 0.2s; text-align: center; }
+        .mes-btn.active { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 4px 10px rgba(90, 79, 207, 0.3); }
+        
+        .planos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .plano-btn { padding: 12px 10px; border: 1px solid var(--border-color); background: var(--input-bg); border-radius: 12px; font-size: 13px; font-weight: 700; color: var(--text-main); cursor: pointer; transition: 0.2s; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; user-select: none;}
+        .plano-btn span { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+        .plano-btn.active { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 4px 10px rgba(90, 79, 207, 0.3); }
+        .plano-btn.active span { color: rgba(255, 255, 255, 0.8); }
+        .plano-btn.custom { grid-column: span 2; }
+        .plano-label { font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 10px; display: block; }
+
+        .checkbox-group { display: flex; align-items: center; gap: 10px; padding: 5px 0; }
+        .checkbox-group input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--primary); }
+        .checkbox-group label { font-size: 14px; font-weight: 600; color: var(--text-main); }
+
+        .btn-salvar { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; margin-top: 5px; cursor: pointer; box-shadow: 0 4px 10px rgba(90, 79, 207, 0.3);}
+        .btn-gerar-recibo { width: 100%; padding: 15px; background: #E11D48; color: white; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; margin-top: 10px; cursor: pointer; display: none; box-shadow: 0 4px 10px rgba(225, 29, 72, 0.3);}
+        .btn-deletar-modal { width: 100%; padding: 15px; background: transparent; color: var(--vencido); border: 2px solid var(--vencido); border-radius: 12px; font-size: 15px; font-weight: 700; margin-top: 10px; cursor: pointer; display: none; }
+
+        .wpp-tones { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
+        .tone-btn { flex: 1 1 45%; padding: 12px 10px; border: 1px solid var(--border-color); background: var(--input-bg); border-radius: 12px; font-size: 13px; font-weight: 600; color: var(--text-main); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; transition: 0.2s;}
+        .tone-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .wpp-textarea { width: 100%; height: 180px; resize: none; line-height: 1.5; margin-bottom: 15px;}
+        .btn-enviar-wpp { width: 100%; padding: 15px; background: var(--whatsapp); color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; }
+
+        /* RECIBO A4 (Oculto na tela principal) */
+        #reciboTemplate { 
+            position: absolute; left: -9999px; width: 600px; background: #FFFFFF; 
+            padding: 40px; color: #1E1E1E; font-family: 'Inter', sans-serif;
+            border: 1px solid #E0E4E8;
+        }
+        .rec-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--primary); padding-bottom: 20px; margin-bottom: 20px; }
+        .logo-recibo { width: 140px; height: auto; }
+        .company-info { text-align: right; font-size: 12px; color: #555; line-height: 1.5; }
+        .company-info strong { color: #1E1E1E; font-size: 16px; }
+        .rec-title { text-align: center; font-size: 20px; font-weight: 800; color: #1E1E1E; margin-bottom: 30px; letter-spacing: 1px; }
+        
+        .rec-section { margin-bottom: 20px; border: 1px solid #E0E4E8; border-radius: 8px; padding: 15px; }
+        .rec-sec-title { font-size: 11px; font-weight: 800; color: var(--primary); text-transform: uppercase; margin-bottom: 10px; letter-spacing: 0.5px; }
+        .rec-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 8px; border-bottom: 1px dashed #E0E4E8; padding-bottom: 4px; }
+        .rec-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        
+        .rec-val-box { background: #F0FDF4; border: 1px solid #10B981; border-radius: 12px; padding: 20px; text-align: center; margin-top: 30px; }
+        .rec-val-box span { display: block; font-size: 12px; font-weight: 700; color: #059669; text-transform: uppercase; margin-bottom: 5px; }
+        .rec-val-box div { font-size: 32px; font-weight: 800; color: #064E3B; }
+        
+        .rec-auth { margin-top: 30px; font-size: 10px; color: #888; font-family: monospace; text-align: center; word-break: break-all; }
+        #reciboTemplate .footer { margin-top: 20px; font-size: 12px; color: #888888; text-align: center; line-height: 1.5; }
+        
+        .loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; }
+        .spinner { border: 4px solid #333; border-top: 4px solid var(--roma-orange); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 10px;}
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div id="login-screen" class="login-container">
+        <img src="logo.jpg" class="login-logo" alt="Roma Telecom">
+        <h2>Acesso Restrito</h2>
+        <div class="input-group">
+            <input type="email" id="loginEmail" placeholder="Seu E-mail">
+        </div>
+        <div class="input-group">
+            <input type="password" id="loginSenha" placeholder="Sua Senha">
+        </div>
+        <button class="btn-salvar" onclick="fazerLogin()">Entrar</button>
+        <button class="btn-esqueci" onclick="esqueciSenha()">Esqueci minha senha</button>
+    </div>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <div style="font-weight: 600; color: var(--roma-orange);" id="loadingText">Sincronizando...</div>
+    </div>
+
+    <div id="app-content">
+        
+        <!-- CABEÇALHO PADRÃO (Dashboard) -->
+        <div id="header-default">
+            <div class="topbar">
+                <h1>Roma Telecom <span class="star-icon">☁️</span></h1>
+                <div class="topbar-actions">
+                    <button class="topbar-btn btn-logout" onclick="fazerLogout()" title="Sair"><i class="fa-solid fa-right-from-bracket"></i></button>
+                    <button class="topbar-btn" onclick="alternarTema()" title="Modo Escuro"><i class="fa-solid fa-moon"></i></button>
+                    <button class="topbar-btn" id="btnOrdem" onclick="alternarOrdem()" title="Mudar Ordem"><i class="fa-solid fa-arrow-down-a-z"></i></button>
+                    <button class="topbar-btn" onclick="abrirModalMes()"><i class="fa-regular fa-calendar"></i> <span id="mesAtualLabel">Mês</span> ▾</button>
+                </div>
+            </div>
+
+            <div id="top-dashboard" class="top-dashboard">
+                <div class="dash-box total">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px; position: relative; z-index: 2;">
+                        <span id="dash-mes-label" style="font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.8); letter-spacing: 1px;"><i class="fa-regular fa-calendar"></i> AGOSTO / 2026</span>
+                    </div>
+                    <button class="eye-btn btnEyeClass" onclick="togglePrivacy()" style="top: 15px; right: 15px;"><i class="fa-regular fa-eye"></i></button>
+                    <div class="dash-title">Total Esperado</div>
+                    <div class="dash-value dash-blur-target" id="dashTotal">R$ 0,00</div>
+                </div>
+                <div class="dash-box pago">
+                    <div class="dash-title">Recebido</div>
+                    <div class="dash-value dash-blur-target" id="dashRecebido">R$ 0,00</div>
+                </div>
+                <div class="dash-box pendente">
+                    <div class="dash-title">A Receber</div>
+                    <div class="dash-value dash-blur-target" id="dashReceber">R$ 0,00</div>
+                </div>
+            </div>
+
+            <div style="padding: 0 15px; margin-bottom: 10px;">
+                <div style="background: var(--card); padding: 15px; border-radius: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.03); border: 1px solid var(--border-color);">
+                    <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:10px;">
+                        <span><i class="fa-solid fa-chart-line" style="color:var(--primary);"></i> Progresso de Recebimento</span>
+                        <span id="dash-progress-text" style="color:var(--text-main);">0%</span>
+                    </div>
+                    <div style="height: 8px; background: var(--input-bg); border-radius: 10px; overflow: hidden;">
+                        <div id="dash-progress-fill" style="height: 100%; background: var(--pago); width: 0%; transition: 1s ease-out; border-radius: 10px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="search-area-nova">
+                <div class="search-input-wrapper">
+                    <span class="search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
+                    <input type="text" id="inputBusca" placeholder="Buscar cliente..." oninput="renderizarLista()">
+                </div>
+                <button class="btn-filtro-novo" id="btnDashFiltroPendentes" onclick="setFiltroDash('pendentes')">Pendentes (<span id="qtd-btn-pendentes">0</span>)</button>
+                <button class="btn-filtro-novo" id="btnDashFiltroPagos" onclick="setFiltroDash('pagos')">Pagos (<span id="qtd-btn-pagos">0</span>)</button>
+            </div>
+
+            <div class="tabs">
+                <button class="tab-btn active" id="tab-Roma 1" onclick="mudarAba('Roma 1')">
+                    ROMA 1 (<span id="count-roma1">0</span>) 
+                    <span class="tab-app-badge"><i class="fa-solid fa-tv"></i> <span id="count-app-roma1">0</span></span>
+                </button>
+                <button class="tab-btn" id="tab-Roma 2" onclick="mudarAba('Roma 2')">
+                    ROMA 2 (<span id="count-roma2">0</span>)
+                    <span class="tab-app-badge"><i class="fa-solid fa-tv"></i> <span id="count-app-roma2">0</span></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- CABEÇALHO ROMA PREMIUM -->
+        <div id="header-roma2">
+            <div class="r2-top-bar">
+                <div class="r2-brand-area">
+                    <div class="r2-logo-icon"><i class="fa-solid fa-briefcase"></i></div>
+                    <div class="r2-brand-info">
+                        <h3>Roma Premium</h3>
+                    </div>
+                </div>
+                <div class="r2-top-actions">
+                    <button class="r2-top-btn" onclick="alternarTema()"><i class="fa-solid fa-moon"></i></button>
+                    <button class="r2-top-btn" id="btnOrdemR2" onclick="alternarOrdem()"><i class="fa-solid fa-arrow-down-a-z"></i></button>
+                    <button class="r2-top-btn" onclick="abrirModalUnidade()"><span id="lblUnidadeR2">Roma 1</span> ▾</button>
+                    <button class="r2-top-btn" onclick="abrirModalMes()"><span id="lblMesR2">Ago</span> ▾</button>
+                </div>
+            </div>
+
+            <div class="r2-dash">
+                <div class="r2-dash-header">
+                    <span>📅 <span id="r2-dash-mes-label">AGOSTO / 2026</span></span>
+                    <button class="r2-diag-btn" onclick="alert('Sistema operando normalmente. 100% Nuvem.')"><i class="fa-solid fa-wand-magic-sparkles"></i> Diagnóstico</button>
+                </div>
+                <div class="r2-val-area">
+                    <p style="color:rgba(255,255,255,0.6); font-size:11px; margin-bottom:4px; font-weight:600; text-transform:uppercase;">Total Esperado do Mês</p>
+                    <h1 id="r2-dash-total" class="dash-blur-target">R$ 0,00</h1>
+                    <button class="eye-btn btnEyeClass" onclick="togglePrivacy()" style="top: 0; right: 0;"><i class="fa-regular fa-eye"></i></button>
+                </div>
+                
+                <div style="display:flex; justify-content: space-between; margin-bottom: 5px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px;">
+                    <div>
+                        <p style="color:var(--r2-green-light); font-size:11px; font-weight:600; margin-bottom:4px; text-transform:uppercase;">Recebido</p>
+                        <h3 id="r2-dash-recebido" class="dash-blur-target" style="color:white; font-size:16px;">R$ 0,00</h3>
+                    </div>
+                    <div style="text-align:right;">
+                        <p style="color:var(--r2-orange); font-size:11px; font-weight:600; margin-bottom:4px; text-transform:uppercase;">A Receber</p>
+                        <h3 id="r2-dash-receber" class="dash-blur-target" style="color:white; font-size:16px;">R$ 0,00</h3>
+                    </div>
+                </div>
+
+                <div class="r2-progress-bg">
+                    <div class="r2-progress-fill" id="r2-progress"></div>
+                </div>
+                <div class="r2-dash-metrics">
+                    <div class="r2-metric-pill"><span class="r2-dot green"></span> Pagos <strong id="r2-qtd-pagos">0</strong></div>
+                    <div class="r2-metric-pill"><span class="r2-dot red"></span> Pendentes <strong id="r2-qtd-pendentes">0</strong></div>
+                </div>
+            </div>
+
+            <div class="r2-section-title">
+                <h3>📑 LANÇAMENTOS (<span id="r2-total-lanc">0</span>)</h3>
+                <div class="r2-section-actions">
+                    <button class="r2-btn-dark" onclick="abrirModalMes()"><i class="fa-solid fa-bolt"></i> Gerar Mês</button>
+                </div>
+            </div>
+            
+            <div class="r2-filters">
+                <button class="r2-filter-btn active" id="r2-fbtn-todos" onclick="setFiltroRoma2('todos')">Todos (<span id="r2-f-todos">0</span>)</button>
+                <button class="r2-filter-btn" id="r2-fbtn-pendentes" onclick="setFiltroRoma2('pendentes')">Pendentes (<span id="r2-f-pendentes">0</span>)</button>
+                <button class="r2-filter-btn" id="r2-fbtn-pagos" onclick="setFiltroRoma2('pagos')">Pagos (<span id="r2-f-pagos">0</span>)</button>
+            </div>
+        </div>
+
+        <div id="lista" class="list-container"></div>
+
+        <!-- BOTÃO FLUTUANTE SEMPRE ATIVO (+) -->
+        <button class="fab" id="fab-default" onclick="abrirModalCliente()"><i class="fa-solid fa-plus"></i></button>
+
+        <!-- NAVEGAÇÃO INFERIOR -->
+        <div class="bottom-nav" id="nav-default">
+            <div class="nav-item active"><span class="nav-icon"><i class="fa-solid fa-house"></i></span><span>Início</span></div>
+            <div class="nav-item" onclick="abrirModalMetricas()"><span class="nav-icon"><i class="fa-solid fa-chart-pie"></i></span><span>Relatórios</span></div>
+            <div class="nav-item" onclick="abrirModalConfig()"><span class="nav-icon"><i class="fa-solid fa-gear"></i></span><span>Ajustes</span></div>
+        </div>
+        <div class="r2-bottom-nav" id="nav-roma2">
+            <div class="r2-nav-item active"><span class="icon"><i class="fa-solid fa-house"></i></span><span>Início</span></div>
+            <div class="r2-nav-item" onclick="abrirModalCliente()"><span class="icon"><i class="fa-solid fa-users"></i></span><span>Clientes</span></div>
+            <div class="r2-nav-item" onclick="abrirModalMes()"><span class="icon"><i class="fa-solid fa-calendar-days"></i></span><span>Meses</span></div>
+            <div class="r2-nav-item" onclick="abrirModalMetricas()"><span class="icon"><i class="fa-solid fa-chart-pie"></i></span><span>Resumo</span></div>
+            <div class="r2-nav-item" onclick="abrirModalConfig()"><span class="icon"><i class="fa-solid fa-gear"></i></span><span>Ajustes</span></div>
+        </div>
+
+
+        <!-- ========================================== -->
+        <!-- MODAIS DE SISTEMA                          -->
+        <!-- ========================================== -->
+
+        <!-- Auditoria de Cliente -->
+        <div class="modal-overlay" id="modalPagamento">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Auditoria de Cliente</h2>
+                    <button class="close-btn" onclick="fecharModal('modalPagamento')">×</button>
+                </div>
+                <p style="font-size: 14px; margin-bottom: 15px; color: var(--text-main); font-weight: 600;" id="textoConfirmaPgto"></p>
+
+                <div id="botoesPgto" style="display: flex; gap: 10px; flex-direction: column; margin-bottom: 15px;">
+                    <button class="btn-salvar" style="background: var(--metrics);" onclick="confirmarPagamento('Pix')"><i class="fa-brands fa-pix"></i> Recebido via Pix</button>
+                    <button class="btn-salvar" style="background: var(--whatsapp);" onclick="confirmarPagamento('Dinheiro')"><i class="fa-solid fa-money-bill-wave"></i> Recebido em Dinheiro</button>
+                    <button class="btn-salvar" style="background: var(--pendente);" onclick="iniciarPagamentoParcial()"><i class="fa-solid fa-triangle-exclamation"></i> Pagamento Parcial</button>
+                </div>
+
+                <div id="divPagamentoParcial" style="display: none; flex-direction: column; gap: 10px; margin-bottom: 15px;">
+                    <p style="font-size: 13px; color: var(--text-muted);">Digite o valor que o cliente está pagando agora:</p>
+                    <input type="number" id="valorParcial" placeholder="Ex: 50" style="padding: 14px; border-radius: 12px; border: 1px solid var(--border-color); font-size: 16px; font-weight: bold; outline: none; background: var(--input-bg); color: var(--text-main); width: 100%;">
+                    <button class="btn-salvar" style="background: var(--primary);" onclick="confirmarPagamentoParcial()">Confirmar Valor Parcial</button>
+                </div>
+
+                <div id="botoesAvancados" style="display: flex; gap: 10px; flex-direction: column; border-top: 1px solid var(--border-color); padding-top: 15px;">
+                    <button class="btn-salvar" style="background: var(--isento); color: white;" id="btnIsentar" onclick="confirmarIsencao()"><i class="fa-regular fa-circle-check"></i> Isentar Fatura</button>
+                    <button class="btn-salvar" style="background: #000000; color: #FFFFFF;" id="btnBloquear" onclick="confirmarBloqueio()"><i class="fa-solid fa-ban"></i> Suspender Sinal (Bloquear)</button>
+                    <button class="btn-salvar" style="background: var(--cancelado); color: white;" id="btnCancelar" onclick="confirmarCancelamento()"><i class="fa-solid fa-xmark"></i> Cancelar Contrato (Desistir)</button>
+                </div>
+
+                <div id="botoesDesfazer" style="display: none; flex-direction: column; gap: 10px;">
+                    <button class="btn-deletar-modal" id="btnDesfazerPgto" style="display: block; border-color: var(--pendente); color: var(--pendente);" onclick="desfazerAcao()"><i class="fa-solid fa-rotate-left"></i> Desfazer Ação (Voltar Pendente)</button>
+                    <button class="btn-salvar" id="btnRestabelecer" style="background: var(--pendente); display: none;" onclick="desfazerAcao()"><i class="fa-solid fa-arrow-rotate-left"></i> Restabelecer Cliente (Voltar Pendente)</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ajustes -->
+        <div class="modal-overlay" id="modalConfig">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2><i class="fa-solid fa-gear"></i> Ajustes da Conta</h2>
+                    <button class="close-btn" onclick="fecharModal('modalConfig')">×</button>
+                </div>
+                
+                <div class="input-group">
+                    <label class="plano-label" style="color: var(--text-main);">Estilo da Tela Inicial:</label>
+                    <input type="hidden" id="configLayout" value="dashboard">
+                    
+                    <div class="layout-grid">
+                        <div class="layout-btn" onclick="selecionarLayout('dashboard', this)">
+                            <div class="icon"><i class="fa-solid fa-chart-pie"></i></div>
+                            <div style="text-align: left;">
+                                <div style="font-size: 15px;">Dashboard</div>
+                                <span style="margin-top:2px;">Layout Claro Padrão</span>
+                            </div>
+                        </div>
+                        <div class="layout-btn" onclick="selecionarLayout('roma2', this)">
+                            <div class="icon"><i class="fa-solid fa-rocket"></i></div>
+                            <div style="text-align: left;">
+                                <div style="font-size: 15px;">Roma Premium</div>
+                                <span style="margin-top:2px;">Layout Escuro e Moderno</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="input-group" style="margin-top: 20px;">
+                    <label class="plano-label" style="color: var(--text-main);">Dados do seu PIX para Cobrança:</label>
+                    <textarea id="configPixText" class="wpp-textarea" style="height: 120px;"></textarea>
+                </div>
+                <button class="btn-salvar" onclick="salvarAjustes()">Salvar Ajustes</button>
+            </div>
+        </div>
+
+        <!-- Grade Meses -->
+        <div class="modal-overlay" id="modalMes">
+            <div class="modal-content">
+                <div class="modal-header"><h2><i class="fa-regular fa-calendar-days"></i> Selecione o Mês</h2><button class="close-btn" onclick="fecharModal('modalMes')">×</button></div>
+                <div class="meses-grid" id="gridMeses"></div>
+            </div>
+        </div>
+
+        <!-- Unidades (Modal do Roma Premium) -->
+        <div class="modal-overlay" id="modalUnidade">
+            <div class="modal-content">
+                <div class="modal-header"><h2><i class="fa-solid fa-building"></i> Selecione a Unidade</h2><button class="close-btn" onclick="fecharModal('modalUnidade')">×</button></div>
+                <div class="planos-grid">
+                    <div class="plano-btn unidade-btn" id="btn-unidade-r1" onclick="mudarAba('Roma 1'); fecharModal('modalUnidade')">
+                        Roma Telecom 1 (<span id="modal-count-r1">0</span>)
+                        <span class="tab-app-badge"><i class="fa-solid fa-tv"></i> <span id="modal-app-r1">0</span></span>
+                    </div>
+                    <div class="plano-btn unidade-btn" id="btn-unidade-r2" onclick="mudarAba('Roma 2'); fecharModal('modalUnidade')">
+                        Roma Telecom 2 (<span id="modal-count-r2">0</span>)
+                        <span class="tab-app-badge"><i class="fa-solid fa-tv"></i> <span id="modal-app-r2">0</span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Editar Cliente -->
+        <div class="modal-overlay" id="modalCliente">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modalTitle"><i class="fa-solid fa-user-pen"></i> Novo Cliente</h2>
+                    <button class="close-btn" onclick="fecharModal('modalCliente')">×</button>
+                </div>
+                <input type="hidden" id="cliId">
+                
+                <div class="input-group"><input type="text" id="cliNome" placeholder="Apelido (Aparece na Lista)"></div>
+                <div class="input-group"><input type="text" id="cliNomeCompleto" placeholder="Nome Completo (Para o Recibo)"></div>
+                
+                <div class="input-group"><input type="tel" id="cliTelefone" placeholder="WhatsApp (Ex: 91981511033)"></div>
+                
+                <!-- CAMPOS DE ENDEREÇO SEPARADOS -->
+                <div class="input-group" style="display: flex; gap: 10px;">
+                    <input type="text" id="cliRua" placeholder="Rua (Ex: Tv. São João)" style="flex: 2;">
+                    <input type="text" id="cliNumero" placeholder="Nº" style="flex: 1;">
+                </div>
+                <div class="input-group">
+                    <input type="text" id="cliBairro" placeholder="Bairro (Ex: Centro)">
+                </div>
+                <div class="input-group" style="display: flex; gap: 10px;">
+                    <input type="text" id="cliCep" value="68400-000" readonly style="background-color: #E0E4E8; color: #888; flex: 1; text-align: center; font-weight: bold;">
+                    <input type="text" id="cliCidade" value="Cametá-PA" readonly style="background-color: #E0E4E8; color: #888; flex: 1; text-align: center; font-weight: bold;">
+                </div>
+
+                <div class="input-group"><input type="number" id="cliDia" placeholder="Dia de Vencimento (Ex: 15)"></div>
+                
+                <label class="plano-label">Selecione o Plano:</label>
+                <input type="hidden" id="cliPlano">
+                <div class="planos-grid">
+                    <div class="plano-btn" onclick="selecionarPlano('Plano Básico 100 Mega', '85,00', this)">Básico 100M <span>R$ 85,00</span></div>
+                    <div class="plano-btn" onclick="selecionarPlano('Plano Premium 250 Mega', '100,00', this)">Premium 250M <span>R$ 100,00</span></div>
+                    <div class="plano-btn" onclick="selecionarPlano('Plano Gold 400 Mega', '120,00', this)">Gold 400M <span>R$ 120,00</span></div>
+                    <div class="plano-btn" onclick="selecionarPlano('Plano Diamante 500 Mega', '135,00', this)">Diamante 500M <span>R$ 135,00</span></div>
+                    <div class="plano-btn custom active" onclick="selecionarPlano('', '', this)"><i class="fa-solid fa-gear"></i> Personalizado <span>(Ajuste o valor)</span></div>
+                </div>
+
+                <div class="input-group"><input type="text" id="cliValor" placeholder="Valor Manual (Ex: 85,00 ou Padrão)"></div>
+                <div class="input-group"><input type="text" id="cliObs" placeholder="Observações Gerais (Opcional)"></div>
+                
+                <div class="input-group">
+                    <select id="cliUnidade">
+                        <option value="Roma 1">Unidade: Roma 1</option>
+                        <option value="Roma 2">Unidade: Roma 2</option>
+                    </select>
+                </div>
+                
+                <div class="input-group checkbox-group">
+                    <input type="checkbox" id="cliApp">
+                    <label for="cliApp">Cliente usa Aplicativo (IPTV)?</label>
+                </div>
+
+                <button class="btn-salvar" onclick="salvarCliente()">Salvar Nuvem</button>
+                <button class="btn-gerar-recibo" id="btnGerarReciboModal" onclick="processarReciboModal()" style="display:none; background: #E11D48; box-shadow: 0 4px 10px rgba(225, 29, 72, 0.3);"><i class="fa-solid fa-file-pdf"></i> Gerar Recibo PDF Oficial</button>
+                <button class="btn-deletar-modal" id="btnDeletarModal" onclick="deletarClienteModal()"><i class="fa-solid fa-trash-can"></i> Apagar Cliente</button>
+            </div>
+        </div>
+
+        <!-- MODAL RELATÓRIO GRADE COM GRÁFICO -->
+        <div class="modal-overlay" id="modalMetricas">
+            <div class="modal-content" style="background: transparent; box-shadow: none; padding: 0; max-width: 400px; margin: auto;">
+                <div style="background: var(--card); border-radius: 24px; padding: 25px 20px;">
+                    <div class="modal-header">
+                        <h2 id="metTitle" style="color: var(--text-main);">Resumo do Mês</h2>
+                        <button class="close-btn" onclick="fecharModal('modalMetricas')">×</button>
+                    </div>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">Cálculos exatos da mensalidade atual.</p>
+                    
+                    <div class="dash-box total" style="margin-bottom: 12px; border-radius: 16px;">
+                        <button class="eye-btn btnEyeClass" onclick="togglePrivacy()"><i class="fa-regular fa-eye"></i></button>
+                        <div class="dash-title" style="font-size: 11px;">Total Esperado</div>
+                        <div class="dash-value dash-blur-target" id="metTotal">R$ 0,00</div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="dash-box pago" style="min-height: auto; padding: 15px; border-radius: 16px;">
+                            <div class="dash-title" style="font-size: 11px;">Recebido</div>
+                            <div class="dash-value dash-blur-target" id="metRecebido" style="font-size: 18px;">R$ 0,00</div>
+                        </div>
+                        <div class="dash-box pendente" style="min-height: auto; padding: 15px; border-radius: 16px;">
+                            <div class="dash-title" style="font-size: 11px;">A Receber</div>
+                            <div class="dash-value dash-blur-target" id="metReceber" style="font-size: 18px;">R$ 0,00</div>
+                        </div>
+                    </div>
+
+                    <!-- SEÇÃO GRÁFICA DE PIZZA -->
+                    <h3 style="font-size: 14px; font-weight: 800; color: var(--text-main); margin-top: 25px; margin-bottom: 15px; text-align: center;"><i class="fa-solid fa-chart-pie"></i> Métricas Visuais</h3>
+                    <div style="position: relative; height: 220px; width: 100%; display: flex; justify-content: center;">
+                        <canvas id="chartMetricas"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL DE RECIBO (PDF E BOTOES) -->
+        <div class="modal-recibo-full" id="modalVerRecibo">
+            <div class="pdf-actions-bar">
+                <button class="btn-pdf-share" onclick="compartilharPDF()"><i class="fa-solid fa-share-nodes"></i> Compartilhar</button>
+                <button class="btn-pdf-down" onclick="baixarPDF()"><i class="fa-solid fa-download"></i> Baixar PDF</button>
+            </div>
+            
+            <div id="reciboImgArea" style="flex:1; overflow-y:auto; width: 100%; max-width: 400px; background:#e5e7eb; padding: 15px; display:flex; justify-content:center;"></div>
+            
+            <div style="padding: 15px; width: 100%; max-width: 400px; background: var(--card); text-align:center; box-shadow: 0 -4px 10px rgba(0,0,0,0.05);">
+                <button class="btn-fechar-print" onclick="fecharReciboPrint()" style="margin:0; width:100%;">Voltar para o App</button>
+            </div>
+        </div>
+        
+        <!-- O GABARITO A4 OFICIAL (Oculto) -->
+        <div id="reciboTemplate">
+            <div class="rec-header">
+                <img src="logo.jpg" class="logo-recibo" alt="Roma Telecom">
+                <div class="company-info">
+                    <strong>ROMA TELECOM LTDA</strong><br>
+                    CNPJ: 00.000.000/0001-00<br>
+                    Cametá - Pará
+                </div>
+            </div>
+            <div class="rec-title">COMPROVANTE DE PAGAMENTO</div>
+            
+            <div class="rec-section">
+                <div class="rec-sec-title">DADOS DO CLIENTE</div>
+                <div class="rec-row"><span>Nome:</span> <strong id="recNome">---</strong></div>
+                <div class="rec-row"><span>Endereço:</span> <strong id="recEndereco">---</strong></div>
+                <div class="rec-row"><span>Plano:</span> <strong id="recPlano">---</strong></div>
+            </div>
+
+            <div class="rec-section">
+                <div class="rec-sec-title">DADOS DO PAGAMENTO</div>
+                <div class="rec-row"><span>Vencimento Original:</span> <strong id="recVenc">---</strong></div>
+                <div class="rec-row"><span>Referência:</span> <strong id="recMes">---</strong></div>
+                <div class="rec-row"><span>Data do Pgto:</span> <strong id="recData">---</strong></div>
+                <div class="rec-row"><span>Status:</span> <strong style="color: #10B981;">PAGO ✅</strong></div>
+            </div>
+
+            <div class="rec-val-box">
+                <span>Valor Recebido</span>
+                <div id="recValor">R$ 0,00</div>
+            </div>
+
+            <div class="rec-auth">
+                Autenticação Eletrônica:<br>
+                <span id="recAuthCode"></span>
+            </div>
+            
+            <div class="footer">
+                A Roma Telecom agradece a preferência!<br>
+                Este recibo é válido como comprovante de quitação da mensalidade referente ao mês especificado.
+            </div>
+        </div>
+
+        <!-- Lembrete Wpp -->
+        <div class="modal-overlay" id="modalWpp">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2><i class="fa-brands fa-whatsapp"></i> Lembrete WhatsApp</h2>
+                    <button class="close-btn" onclick="fecharModal('modalWpp')">×</button>
+                </div>
+                <div class="wpp-tones">
+                    <button class="tone-btn active" onclick="mudarTom('gentil', this)">Lembrete Gentil</button>
+                    <button class="tone-btn" onclick="mudarTom('hoje', this)">Vence Hoje</button>
+                    <button class="tone-btn" onclick="mudarTom('cobranca', this)">Cobrança</button>
+                    <button class="tone-btn" onclick="mudarTom('recibo', this)">Agradecimento</button>
+                </div>
+                <textarea id="wppTexto" class="wpp-textarea"></textarea>
+                <button class="btn-enviar-wpp" onclick="enviarWhatsApp()"><i class="fa-regular fa-paper-plane"></i> Enviar Mensagem</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCWMuCACgriWGTrkxALGzF9j5Z7EvL7Lcg",
+            authDomain: "roma-telecom.firebaseapp.com",
+            projectId: "roma-telecom",
+            storageBucket: "roma-telecom.firebasestorage.app",
+            messagingSenderId: "339457858705",
+            appId: "1:339457858705:web:d71b42fd4caa000bca3330"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        const mesesDoAno = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+        let mesSelecionado = mesesDoAno[new Date().getMonth()];
+        let clientes = [];
+        let abaAtual = 'Roma 1';
+        let clienteSelecionadoWpp = null;
+        let ordemAtual = 'data'; 
+        let filtroDashStatus = 'todos'; 
+        let filtroRoma2Status = 'todos'; 
+        let usuarioAtual = null;
+        let pixUsuario = ""; 
+        let clientePgtoId = null;
+        let pagandoAtraso = false; 
+        let privacyMode = localStorage.getItem('romaPrivacy') === 'true';
+        
+        window.jspdf = window.jspdf || {}; 
+        let currentPdfDoc = null; 
+        let currentPdfBlob = null;
+        let currentClientName = "";
+
+        function mostrarLoading(mostrar, texto = "Sincronizando...") {
+            document.getElementById('loadingText').innerText = texto;
+            document.getElementById('loadingOverlay').style.display = mostrar ? 'flex' : 'none';
+        }
+
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                usuarioAtual = user;
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('app-content').style.display = 'block';
+                inicializarApp();
+            } else {
+                usuarioAtual = null;
+                document.getElementById('login-screen').style.display = 'flex';
+                document.getElementById('app-content').style.display = 'none';
+            }
+        });
+
+        async function fazerLogin() {
+            const email = document.getElementById('loginEmail').value; const senha = document.getElementById('loginSenha').value;
+            if(!email || !senha) return alert("Preencha e-mail e senha!");
+            mostrarLoading(true, "Entrando...");
+            try { await auth.signInWithEmailAndPassword(email, senha); } catch (error) { alert("Erro ao entrar."); }
+            mostrarLoading(false);
+        }
+
+        async function esqueciSenha() {
+            const email = document.getElementById('loginEmail').value;
+            if(!email) return alert("Digite o e-mail acima primeiro!");
+            try { await auth.sendPasswordResetEmail(email); alert("Link enviado!"); } catch (error) { alert("Erro no e-mail."); }
+        }
+
+        async function fazerLogout() { if(confirm("Deseja sair da sua conta?")) await auth.signOut(); }
+
+        function aplicarLayoutPref() {
+            const layout = localStorage.getItem('romaLayoutPref') || 'dashboard'; 
+            const hDefault = document.getElementById('header-default');
+            const hRoma2 = document.getElementById('header-roma2');
+            const navDefault = document.getElementById('nav-default');
+            const navR2 = document.getElementById('nav-roma2');
+            const fab = document.getElementById('fab-default');
+
+            document.body.classList.remove('layout-roma2');
+
+            if (layout === 'roma2') {
+                if(hDefault) hDefault.style.display = 'none'; if(hRoma2) hRoma2.style.display = 'block';
+                if(navDefault) navDefault.style.display = 'none'; if(navR2) navR2.style.display = 'flex'; 
+                if(fab) fab.style.display = 'flex'; 
+                document.body.classList.add('layout-roma2');
+            } else {
+                if(hDefault) hDefault.style.display = 'block'; if(hRoma2) hRoma2.style.display = 'none';
+                if(navDefault) navDefault.style.display = 'flex'; if(navR2) navR2.style.display = 'none'; 
+                if(fab) fab.style.display = 'flex'; 
+            }
+        }
+
+        function aplicarPrivacy() {
+            const targets = document.querySelectorAll('.dash-blur-target');
+            const btns = document.querySelectorAll('.btnEyeClass');
+            if (privacyMode) { targets.forEach(t => t.classList.add('blur-active')); btns.forEach(b => b.innerHTML = '<i class="fa-regular fa-eye-slash"></i>'); } 
+            else { targets.forEach(t => t.classList.remove('blur-active')); btns.forEach(b => b.innerHTML = '<i class="fa-regular fa-eye"></i>'); }
+        }
+
+        function togglePrivacy() { privacyMode = !privacyMode; localStorage.setItem('romaPrivacy', privacyMode); aplicarPrivacy(); }
+
+        async function sincronizarDividasMesAnterior() {
+            const indexMesAtual = mesesDoAno.indexOf(mesSelecionado);
+            if(indexMesAtual <= 0) return; 
+            const mesAnterior = mesesDoAno[indexMesAtual - 1];
+            try {
+                const docAnt = await db.collection("usuarios").doc(usuarioAtual.uid).collection("meses_roma").doc(mesAnterior).get();
+                if(docAnt.exists) {
+                    const clisAnt = docAnt.data().clientes || [];
+                    let precisaSalvar = false;
+                    clientes.forEach(cAtual => {
+                        const cAnt = clisAnt.find(x => x.id === cAtual.id);
+                        if(cAnt) {
+                            if(cAnt.status !== 'Pago' && cAnt.status !== 'Isento' && cAnt.status !== 'Cancelado') {
+                                if(cAtual.statusAtrasado !== 'Pendente' || cAtual.valorAtrasado !== cAnt.valor) {
+                                    cAtual.valorAtrasado = cAnt.valor; cAtual.mesAtrasado = mesAnterior; cAtual.statusAtrasado = 'Pendente'; precisaSalvar = true;
+                                }
+                            } else if (cAnt.status === 'Pago') {
+                                if(cAtual.valorAtrasado && cAtual.statusAtrasado !== 'Pago') {
+                                    cAtual.statusAtrasado = 'Pago'; cAtual.logPagamentoAtrasado = `✅ ${mesAnterior} Pago`; precisaSalvar = true;
+                                }
+                            } else if (cAnt.status === 'Isento' || cAnt.status === 'Cancelado') {
+                                if(cAtual.valorAtrasado) {
+                                    cAtual.valorAtrasado = null; cAtual.mesAtrasado = null; cAtual.statusAtrasado = null; cAtual.logPagamentoAtrasado = ''; precisaSalvar = true;
+                                }
+                            }
+                        }
+                    });
+                    if(precisaSalvar) { await db.collection("usuarios").doc(usuarioAtual.uid).collection("meses_roma").doc(mesSelecionado).set({ clientes: clientes }); renderizarLista(); }
+                }
+            } catch(e) {}
+        }
+
+        async function inicializarApp() {
+            if(!usuarioAtual) return; mostrarLoading(true, "Carregando Gaveta...");
+            aplicarLayoutPref();
+
+            try {
+                const configRef = db.collection("usuarios").doc(usuarioAtual.uid).collection("config").doc("pix");
+                const configSnap = await configRef.get();
+                if (configSnap.exists) pixUsuario = configSnap.data().texto;
+                else pixUsuario = (usuarioAtual.email === 'agnaldo2@yahoo.com.br') ? "*Nossa chave PIX:*\nCelular: 91 981511033\nBanco: Mercado Pago" : "*Nossa chave PIX:*\nChave: [Sua Chave]";
+
+                const docRef = db.collection("usuarios").doc(usuarioAtual.uid).collection("meses_roma").doc(mesSelecionado);
+                let docSnap = await docRef.get();
+                
+                if (!docSnap.exists && usuarioAtual.email === 'agnaldo2@yahoo.com.br') {
+                    mostrarLoading(true, "Importando clientes...");
+                    const publicBackup = await db.collection("meses_roma").doc(mesSelecionado).get();
+                    if (publicBackup.exists) { await docRef.set(publicBackup.data()); docSnap = await docRef.get(); }
+                }
+                if (docSnap.exists) clientes = docSnap.data().clientes || []; else clientes = []; 
+                
+                let elMesAtual = document.getElementById('mesAtualLabel'); if(elMesAtual) elMesAtual.innerText = mesSelecionado;
+                
+                let labelMesCompleto = `${mesSelecionado.toUpperCase()} / 2026`;
+                let elDashMes = document.getElementById('dash-mes-label'); if(elDashMes) elDashMes.innerHTML = `<i class="fa-regular fa-calendar"></i> ${labelMesCompleto}`;
+                let elR2Mes = document.getElementById('r2-dash-mes-label'); if(elR2Mes) elR2Mes.innerText = labelMesCompleto;
+                let elLblMesR2 = document.getElementById('lblMesR2'); if(elLblMesR2) elLblMesR2.innerText = mesSelecionado.substring(0,3);
+
+                if (localStorage.getItem('romaDarkMode') === 'true') document.body.classList.add('dark-mode');
+                
+                renderizarLista();
+                await sincronizarDividasMesAnterior();
+
+            } catch (error) { alert("Erro Firebase: " + (error.message || error)); }
+            mostrarLoading(false); aplicarPrivacy();
+        }
+
+        function abrirModalUnidade() { document.getElementById('modalUnidade').style.display = 'flex'; }
+        function abrirModalConfig() { 
+            document.getElementById('configPixText').value = pixUsuario; 
+            const layoutAtual = localStorage.getItem('romaLayoutPref') || 'dashboard';
+            document.getElementById('configLayout').value = layoutAtual;
+            
+            const botoes = document.querySelectorAll('.layout-btn'); botoes.forEach(b => b.classList.remove('active'));
+            if (layoutAtual === 'roma2') botoes[1].classList.add('active'); 
+            else botoes[0].classList.add('active');
+            
+            document.getElementById('modalConfig').style.display = 'flex'; 
+        }
+
+        function selecionarLayout(tipo, btnElement) { document.getElementById('configLayout').value = tipo; const botoes = document.querySelectorAll('.layout-btn'); botoes.forEach(b => b.classList.remove('active')); btnElement.classList.add('active'); }
+
+        async function salvarAjustes() {
+            const novoPix = document.getElementById('configPixText').value; const novoLayout = document.getElementById('configLayout').value;
+            localStorage.setItem('romaLayoutPref', novoLayout); aplicarLayoutPref();
+            mostrarLoading(true, "Salvando...");
+            try { await db.collection("usuarios").doc(usuarioAtual.uid).collection("config").doc("pix").set({ texto: novoPix }); pixUsuario = novoPix; fecharModal('modalConfig'); renderizarLista(); } catch (e) { alert("Erro."); }
+            mostrarLoading(false);
+        }
+
+        async function salvarDados() {
+            if(!usuarioAtual) return; mostrarLoading(true);
+            try { await db.collection("usuarios").doc(usuarioAtual.uid).collection("meses_roma").doc(mesSelecionado).set({ clientes: clientes }); renderizarLista(); } catch (e) { alert("Erro."); }
+            mostrarLoading(false);
+        }
+
+        function obterValorOriginalPlano(plano, valorAtual) {
+            if (plano === 'Plano Básico 100 Mega' || plano === 'Fibra 100 Mega') return '85,00'; 
+            if (plano === 'Plano Premium 250 Mega' || plano === 'Fibra 250 Mega') return '100,00'; 
+            if (plano === 'Plano Gold 400 Mega' || plano === 'Fibra 400 Mega') return '120,00'; 
+            if (plano === 'Plano Diamante 500 Mega' || plano === 'Fibra 500 Mega') return '135,00'; 
+            return valorAtual; 
+        }
+
+        async function alternarMes(novoMes) {
+            if(!usuarioAtual) return; mostrarLoading(true);
+            try {
+                const docRef = await db.collection("usuarios").doc(usuarioAtual.uid).collection("meses_roma").doc(novoMes).get();
+                if (docRef.exists) { clientes = docRef.data().clientes || []; } else {
+                    let confirmacao = confirm(`A gaveta de ${novoMes} está vazia.\nDeseja copiar a lista atual e calcular os atrasos?`);
+                    if (confirmacao) {
+                        let clientesParaCopiar = clientes.filter(c => c.status !== 'Cancelado');
+                        let novosClientes = JSON.parse(JSON.stringify(clientesParaCopiar));
+                        novosClientes.forEach(c => { 
+                            if (c.status !== 'Pago' && c.status !== 'Isento') { c.valorAtrasado = c.valor; c.mesAtrasado = mesSelecionado; c.statusAtrasado = 'Pendente'; c.logPagamentoAtrasado = ''; } 
+                            else { c.valorAtrasado = null; c.mesAtrasado = null; c.statusAtrasado = null; c.logPagamentoAtrasado = ''; }
+                            c.valor = obterValorOriginalPlano(c.plano, c.valor); c.status = (c.status === 'Bloqueado') ? 'Bloqueado' : 'Pendente'; c.logPagamento = (c.status === 'Bloqueado') ? '⛔ Sinal Suspenso' : ''; 
+                        }); 
+                        clientes = novosClientes;
+                    } else { clientes = []; }
+                }
+                mesSelecionado = novoMes; 
+                
+                let elMesAtual = document.getElementById('mesAtualLabel'); if(elMesAtual) elMesAtual.innerText = mesSelecionado;
+                let labelMesCompleto = `${mesSelecionado.toUpperCase()} / 2026`;
+                let elDashMes = document.getElementById('dash-mes-label'); if(elDashMes) elDashMes.innerHTML = `<i class="fa-regular fa-calendar"></i> ${labelMesCompleto}`;
+                let elR2Mes = document.getElementById('r2-dash-mes-label'); if(elR2Mes) elR2Mes.innerText = labelMesCompleto;
+                let elLblMesR2 = document.getElementById('lblMesR2'); if(elLblMesR2) elLblMesR2.innerText = mesSelecionado.substring(0,3);
+                
+                await db.collection("usuarios").doc(usuarioAtual.uid).collection("meses_roma").doc(mesSelecionado).set({ clientes: clientes });
+                renderizarLista();
+                await sincronizarDividasMesAnterior();
+            } catch (error) { alert("Erro."); }
+            fecharModal('modalMes'); mostrarLoading(false);
+        }
+
+        async function atualizarMesAntigo(mesAntigo, idCli, acao, complemento) {
+            try {
+                const ref = db.collection("usuarios").doc(usuarioAtual.uid).collection("meses_roma").doc(mesAntigo);
+                const doc = await ref.get();
+                if (doc.exists) {
+                    let clis = doc.data().clientes; let idx = clis.findIndex(x => x.id === idCli);
+                    if (idx !== -1) {
+                        if (acao === 'Pago') { clis[idx].status = 'Pago'; clis[idx].logPagamento = `✅ Pago com atraso em ${mesSelecionado} via ${complemento}`; } 
+                        else if (acao === 'Parcial') { clis[idx].valor = complemento; clis[idx].logPagamento = `🔄 Abateu valor em ${mesSelecionado}. Resta R$ ${complemento}`; } 
+                        else if (acao === 'Desfazer') { clis[idx].status = 'Pendente'; clis[idx].logPagamento = ''; }
+                        else if (acao === 'Isento') { clis[idx].status = 'Isento'; clis[idx].logPagamento = '⚪ Fatura Isentada/Ajustada'; } 
+                        await ref.set({ clientes: clis });
+                    }
+                }
+            } catch(e) {}
+        }
+
+        function abrirModalPagamento(id, isAtraso = false) {
+            clientePgtoId = id; pagandoAtraso = isAtraso; const c = clientes.find(x => x.id === id);
+            document.getElementById('modalPagamento').style.display = 'flex'; document.getElementById('divPagamentoParcial').style.display = 'none'; document.getElementById('valorParcial').value = '';
+            
+            const bPgto = document.getElementById('botoesPgto'); const bAvancados = document.getElementById('botoesAvancados'); const bDesf = document.getElementById('botoesDesfazer'); 
+            const bBloq = document.getElementById('btnBloquear'); const bIsen = document.getElementById('btnIsentar'); const bCanc = document.getElementById('btnCancelar');
+            const bRest = document.getElementById('btnRestabelecer'); const bDesfPgto = document.getElementById('btnDesfazerPgto');
+            
+            let statusVerificar = isAtraso ? c.statusAtrasado : c.status; let refTexto = isAtraso ? `da DÍVIDA de ${c.mesAtrasado} do cliente ${c.nome}` : `do cliente ${c.nome}`;
+
+            if (statusVerificar === 'Pago') {
+                document.getElementById('textoConfirmaPgto').innerText = `O pagamento ${refTexto} já consta como PAGO. Desfazer?`;
+                bPgto.style.display = 'none'; bAvancados.style.display = 'none'; bDesf.style.display = 'flex'; bDesfPgto.style.display = 'block'; bRest.style.display = 'none';
+            } else if (statusVerificar === 'Bloqueado') {
+                document.getElementById('textoConfirmaPgto').innerText = `SINAL BLOQUEADO. O que fazer?`;
+                bPgto.style.display = 'flex'; bAvancados.style.display = 'flex'; 
+                bBloq.style.display = 'none'; bIsen.style.display = 'block'; bCanc.style.display = 'block';
+                bDesf.style.display = 'flex'; bRest.style.display = 'block'; bDesfPgto.style.display = 'none';
+            } else if (statusVerificar === 'Isento' || statusVerificar === 'Cancelado') {
+                document.getElementById('textoConfirmaPgto').innerText = `Cliente consta como ${statusVerificar.toUpperCase()}. Desfazer e voltar para pendente?`;
+                bPgto.style.display = 'none'; bAvancados.style.display = 'none'; bDesf.style.display = 'flex'; bRest.style.display = 'block'; bDesfPgto.style.display = 'none';
+                bRest.innerHTML = '<i class="fa-solid fa-arrow-rotate-left"></i> Restabelecer Cliente (Voltar Pendente)';
+            } else {
+                document.getElementById('textoConfirmaPgto').innerText = `Como foi o pagamento ${refTexto}?`;
+                bPgto.style.display = 'flex'; bAvancados.style.display = isAtraso ? 'none' : 'flex'; 
+                bBloq.style.display = 'block'; bIsen.style.display = 'block'; bCanc.style.display = 'none'; 
+                bDesf.style.display = 'none';
+            }
+        }
+
+        async function confirmarPagamento(metodo) {
+            const c = clientes.find(x => x.id === clientePgtoId); if(!c) return;
+            const hoje = new Date(); const dataStr = `${hoje.getDate().toString().padStart(2,'0')}/${(hoje.getMonth()+1).toString().padStart(2,'0')}`; const horaStr = `${hoje.getHours().toString().padStart(2,'0')}:${hoje.getMinutes().toString().padStart(2,'0')}`;
+
+            if (pagandoAtraso) { c.statusAtrasado = 'Pago'; c.logPagamentoAtrasado = `✅ Dívida via ${metodo} dia ${dataStr}`; atualizarMesAntigo(c.mesAtrasado, c.id, 'Pago', metodo); } 
+            else { c.status = 'Pago'; c.logPagamento = `✅ Pagou via ${metodo} no dia ${dataStr} às ${horaStr}`; }
+            fecharModal('modalPagamento'); await salvarDados();
+        }
+        
+        function iniciarPagamentoParcial() { document.getElementById('botoesPgto').style.display = 'none'; document.getElementById('botoesAvancados').style.display = 'none'; document.getElementById('divPagamentoParcial').style.display = 'flex'; document.getElementById('valorParcial').focus(); }
+
+        async function confirmarPagamentoParcial() {
+            const valInput = document.getElementById('valorParcial').value; if(!valInput || valInput <= 0) return alert("Digite um valor válido!");
+            const c = clientes.find(x => x.id === clientePgtoId); if(!c) return;
+            let valorBase = pagandoAtraso ? c.valorAtrasado : c.valor; let valorAtualNum = 100.00; 
+            if (valorBase && valorBase.toLowerCase() !== 'padrão') { let n = parseFloat(valorBase.replace(/\./g, '').replace(',', '.')); if(!isNaN(n)) valorAtualNum = n; }
+            let valorPagoNum = parseFloat(valInput);
+            if (valorPagoNum >= valorAtualNum) { alert("Valor alto! Use Pix ou Dinheiro normal."); return; }
+            let novoValorRestante = (valorAtualNum - valorPagoNum).toFixed(2).replace('.', ','); let valorPagoStr = valorPagoNum.toFixed(2).replace('.', ',');
+            const hoje = new Date(); const dataStr = `${hoje.getDate().toString().padStart(2,'0')}/${(hoje.getMonth()+1).toString().padStart(2,'0')}`;
+
+            if (pagandoAtraso) { c.valorAtrasado = novoValorRestante; c.logPagamentoAtrasado = `🔄 Dívida: Pagou R$ ${valorPagoStr}. Resta R$ ${c.valorAtrasado}`; atualizarMesAntigo(c.mesAtrasado, c.id, 'Parcial', c.valorAtrasado); } 
+            else { c.valor = novoValorRestante; c.logPagamento = `🔄 Pagou R$ ${valorPagoStr} dia ${dataStr}. Resta R$ ${c.valor}`; c.status = 'Pendente'; }
+            fecharModal('modalPagamento'); await salvarDados();
+        }
+
+        async function confirmarBloqueio() { const c = clientes.find(x => x.id === clientePgtoId); if(!c) return; c.status = 'Bloqueado'; c.logPagamento = '⛔ Sinal Suspenso'; fecharModal('modalPagamento'); await salvarDados(); }
+        
+        async function confirmarIsencao() { 
+            const c = clientes.find(x => x.id === clientePgtoId); if(!c) return; 
+            if (pagandoAtraso) {
+                let mesParaAtualizar = c.mesAtrasado;
+                c.valorAtrasado = null; c.mesAtrasado = null; c.statusAtrasado = null; c.logPagamentoAtrasado = '';
+                atualizarMesAntigo(mesParaAtualizar, c.id, 'Isento', '');
+            } else {
+                c.status = 'Isento'; c.logPagamento = '⚪ Fatura Isentada/Ajustada'; 
+            }
+            fecharModal('modalPagamento'); await salvarDados(); 
+        }
+        
+        async function confirmarCancelamento() { const c = clientes.find(x => x.id === clientePgtoId); if(!c) return; c.status = 'Cancelado'; c.logPagamento = '❌ Contrato Cancelado'; fecharModal('modalPagamento'); await salvarDados(); }
+
+        async function desfazerAcao() {
+            const c = clientes.find(x => x.id === clientePgtoId); if(!c) return;
+            if (pagandoAtraso) { c.statusAtrasado = 'Pendente'; c.logPagamentoAtrasado = ''; atualizarMesAntigo(c.mesAtrasado, c.id, 'Desfazer', ''); }
+            else { c.status = 'Pendente'; c.logPagamento = ''; }
+            fecharModal('modalPagamento'); await salvarDados();
+        }
+
+        function selecionarPlano(plano, valor, btnElement) { document.getElementById('cliPlano').value = plano; if (valor !== '') document.getElementById('cliValor').value = valor; const botoes = document.querySelectorAll('.plano-btn'); botoes.forEach(b => b.classList.remove('active')); if(btnElement) btnElement.classList.add('active'); }
+        function alternarTema() { document.body.classList.toggle('dark-mode'); localStorage.setItem('romaDarkMode', document.body.classList.contains('dark-mode')); }
+        
+        function setFiltroDash(tipo) { 
+            if (filtroDashStatus === tipo) { filtroDashStatus = 'todos'; } 
+            else { filtroDashStatus = tipo; }
+            renderizarLista(); 
+        }
+        function setFiltroRoma2(tipo) { filtroRoma2Status = tipo; document.querySelectorAll('.r2-filter-btn').forEach(b => b.classList.remove('active')); document.getElementById(`r2-fbtn-${tipo}`).classList.add('active'); renderizarLista(); }
+
+        function formatarMoeda(valorDigitado) {
+            if (!valorDigitado) return 'Padrão'; let str = valorDigitado.trim(); if (str.toLowerCase() === 'padrão') return 'Padrão'; str = str.replace(/R\$\s?/ig, '').trim(); 
+            if (str.includes(',')) { let partes = str.split(','); if (partes[1].length === 0) return partes[0] + ',00'; if (partes[1].length === 1) return partes[0] + ',' + partes[1] + '0'; return str; } else { return str + ',00'; }
+        }
+
+        async function salvarCliente() {
+            const id = document.getElementById('cliId').value; 
+            const nome = document.getElementById('cliNome').value.toUpperCase(); 
+            const nomeCompleto = document.getElementById('cliNomeCompleto').value.toUpperCase(); 
+            const fone = document.getElementById('cliTelefone').value.replace(/\D/g, ''); 
+            
+            const rua = document.getElementById('cliRua').value; 
+            const num = document.getElementById('cliNumero').value; 
+            const bairro = document.getElementById('cliBairro').value; 
+            const cep = document.getElementById('cliCep').value; 
+            const cidade = document.getElementById('cliCidade').value; 
+
+            const dia = parseInt(document.getElementById('cliDia').value); 
+            const plano = document.getElementById('cliPlano').value; 
+            const val = formatarMoeda(document.getElementById('cliValor').value); 
+            const usaApp = document.getElementById('cliApp').checked; 
+            if (!nome || !dia) return alert('Preencha pelo menos o Apelido e o Dia!');
+
+            if (id) {
+                const index = clientes.findIndex(c => c.id === id);
+                clientes[index].nome = nome; 
+                clientes[index].nomeCompleto = nomeCompleto; 
+                clientes[index].telefone = fone; 
+                clientes[index].rua = rua; 
+                clientes[index].numero = num; 
+                clientes[index].bairro = bairro; 
+                clientes[index].cep = cep; 
+                clientes[index].cidade = cidade; 
+                clientes[index].diaVencimento = dia; 
+                clientes[index].valor = val; 
+                clientes[index].plano = plano; 
+                clientes[index].observacao = document.getElementById('cliObs').value; 
+                clientes[index].unidade = document.getElementById('cliUnidade').value; 
+                clientes[index].usaApp = usaApp;
+            } else {
+                clientes.push({ 
+                    id: Date.now().toString(), nome: nome, nomeCompleto: nomeCompleto, telefone: fone, rua: rua, numero: num, bairro: bairro, cep: cep, cidade: cidade,
+                    diaVencimento: dia, plano: plano, valor: val, observacao: document.getElementById('cliObs').value, unidade: document.getElementById('cliUnidade').value, status: 'Pendente', usaApp: usaApp, logPagamento: '' 
+                });
+            }
+            fecharModal('modalCliente'); await salvarDados();
+        }
+
+        async function deletarClienteModal() { const id = document.getElementById('cliId').value; if(!id) return; if (confirm('Apagar permanente?')) { clientes = clientes.filter(c => c.id !== id); await salvarDados(); fecharModal('modalCliente'); } }
+        async function deletarDireto(id) { if (confirm('Apagar permanente?')) { clientes = clientes.filter(c => c.id !== id); await salvarDados(); } }
+
+        function gerarReciboDireto(id) { 
+            const c = clientes.find(x => x.id === id); if(!c) return;
+            const nomeParaRecibo = c.nomeCompleto && c.nomeCompleto.trim() !== '' ? c.nomeCompleto : c.nome;
+            currentClientName = nomeParaRecibo; 
+
+            mostrarLoading(true, "Gerando PDF Oficial...");
+            
+            let endArr = [];
+            if (c.rua) endArr.push(c.rua);
+            if (c.numero) endArr.push(c.numero);
+            if (c.bairro) endArr.push(c.bairro);
+            let endStr = endArr.join(', ');
+            if (endStr !== '') endStr += ` - ${c.cep || '68400-000'} - ${c.cidade || 'Cametá-PA'}`;
+            else endStr = c.endereco || 'Não informado'; 
+
+            document.getElementById('recNome').innerText = nomeParaRecibo; 
+            document.getElementById('recEndereco').innerText = endStr;
+            document.getElementById('recPlano').innerText = c.plano ? c.plano : 'Personalizado / Antigo';
+            document.getElementById('recVenc').innerText = `Dia ${c.diaVencimento}`;
+            document.getElementById('recMes').innerText = mesSelecionado.toUpperCase() + ' / 2026'; 
+            document.getElementById('recValor').innerText = c.valor === 'Padrão' ? 'R$ 100,00' : `R$ ${c.valor}`;
+            
+            const hoje = new Date(); 
+            document.getElementById('recData').innerText = `${hoje.getDate().toString().padStart(2,'0')}/${(hoje.getMonth()+1).toString().padStart(2,'0')}/${hoje.getFullYear()} às ${hoje.getHours().toString().padStart(2,'0')}:${hoje.getMinutes().toString().padStart(2,'0')}`;
+            
+            const hash = 'RM-' + Date.now().toString(16).toUpperCase() + '-' + Math.random().toString(16).substring(2,8).toUpperCase();
+            document.getElementById('recAuthCode').innerText = hash;
+
+            setTimeout(() => { 
+                html2canvas(document.getElementById('reciboTemplate'), { scale: 3, backgroundColor: '#FFFFFF', useCORS: true }).then(canvas => {
+                    const imgData = canvas.toDataURL("image/jpeg", 0.95); 
+                    try {
+                        const { jsPDF } = window.jspdf;
+                        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                        const pdfWidth = pdf.internal.pageSize.getWidth() - 20; 
+                        const imgProps = pdf.getImageProperties(imgData);
+                        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+                        pdf.addImage(imgData, 'JPEG', 10, 10, pdfWidth, pdfHeight);
+                        currentPdfDoc = pdf; 
+                        currentPdfBlob = pdf.output('blob'); 
+                        document.getElementById('reciboImgArea').innerHTML = `<img src="${imgData}" style="width:100%; border-radius:4px; box-shadow:0 4px 15px rgba(0,0,0,0.1);">`; 
+                        mostrarLoading(false); 
+                        document.getElementById('modalVerRecibo').style.display = 'flex';
+                    } catch(err) { alert("Erro ao criar PDF."); mostrarLoading(false); }
+                }); 
+            }, 500); 
+        }
+
+        function processarReciboModal() {
+            const id = document.getElementById('cliId').value;
+            if(!id) return;
+            gerarReciboDireto(id);
+            fecharModal('modalCliente');
+        }
+
+        function baixarPDF() {
+            if(!currentPdfDoc) return;
+            const nomeArquivo = `Recibo_${currentClientName.replace(/\s+/g, '_')}.pdf`;
+            try { currentPdfDoc.save(nomeArquivo); } catch (e) {
+                const url = URL.createObjectURL(currentPdfBlob);
+                const a = document.createElement('a'); a.href = url; a.download = nomeArquivo;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+            }
+        }
+
+        async function compartilharPDF() {
+            if(!currentPdfBlob) return;
+            const file = new File([currentPdfBlob], `Recibo_${currentClientName.replace(/\s+/g, '_')}.pdf`, { type: 'application/pdf' });
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                try { await navigator.share({ files: [file], title: 'Recibo Roma Telecom', text: `Aqui está o comprovante de pagamento da Roma Telecom para ${currentClientName}.` }); } catch (err) {}
+            } else { alert('Seu dispositivo não suporta compartilhamento direto de PDF via web. Por favor, clique em Baixar PDF.'); baixarPDF(); }
+        }
+
+        function fecharReciboPrint() { document.getElementById('modalVerRecibo').style.display = 'none'; currentPdfDoc = null; currentPdfBlob = null;}
+        
+        function alternarOrdem() { 
+            ordemAtual = (ordemAtual === 'data') ? 'alfabetica' : 'data'; 
+            document.getElementById('btnOrdem').innerHTML = (ordemAtual === 'data') ? '↕️ Data' : '↕️ A-Z'; 
+            document.getElementById('btnOrdemR2').innerHTML = (ordemAtual === 'data') ? '↕️' : 'A-Z'; 
+            renderizarLista(); 
+        }
+
+        function calcularMetricasDinâmicas(listaClientesAba) {
+            let totalEsperado = 0, totalRecebido = 0, totalReceber = 0; 
+            let countPagos = 0, countPendentes = 0, countVencidos = 0, countBloqueados = 0, countIsentos = 0, countCancelados = 0;
+            
+            const hoje = new Date(); 
+            const indexMesAtual = hoje.getMonth(); 
+            const diaAtualReal = hoje.getDate();
+            const indexMesSelecionado = mesesDoAno.indexOf(mesSelecionado);
+
+            listaClientesAba.forEach(c => {
+                let statusCalculo = c.status || 'Pendente';
+                if (statusCalculo === 'Pendente') {
+                    if (indexMesSelecionado < indexMesAtual) { statusCalculo = 'Vencido'; } 
+                    else if (indexMesSelecionado === indexMesAtual && diaAtualReal > c.diaVencimento) { statusCalculo = 'Vencido'; }
+                }
+
+                if (statusCalculo === 'Pago') countPagos++;
+                else if (statusCalculo === 'Pendente') countPendentes++;
+                else if (statusCalculo === 'Vencido') countVencidos++;
+                else if (statusCalculo === 'Bloqueado') countBloqueados++;
+                else if (statusCalculo === 'Isento') countIsentos++;
+                else if (statusCalculo === 'Cancelado') countCancelados++;
+
+                if (c.status === 'Isento' || c.status === 'Cancelado') return;
+                let valorNumerico = 100.00; 
+                if (c.valor && c.valor.toLowerCase() !== 'padrão') { let n = parseFloat(c.valor.replace(/\./g, '').replace(',', '.')); if(!isNaN(n)) valorNumerico = n; }
+                totalEsperado += valorNumerico; 
+                if (c.status === 'Pago') { totalRecebido += valorNumerico; } else { totalReceber += valorNumerico; }
+            });
+
+            const tEsp = `R$ ${totalEsperado.toFixed(2).replace('.', ',')}`; const tRec = `R$ ${totalRecebido.toFixed(2).replace('.', ',')}`; const tAre = `R$ ${totalReceber.toFixed(2).replace('.', ',')}`;
+
+            document.getElementById('dashTotal').innerText = tEsp; document.getElementById('dashRecebido').innerText = tRec; document.getElementById('dashReceber').innerText = tAre;
+            document.getElementById('metTotal').innerText = tEsp; document.getElementById('metRecebido').innerText = tRec; document.getElementById('metReceber').innerText = tAre;
+            document.getElementById('r2-dash-total').innerText = tEsp; document.getElementById('r2-dash-recebido').innerText = tRec; document.getElementById('r2-dash-receber').innerText = tAre;
+            
+            document.getElementById('r2-qtd-pagos').innerText = countPagos; document.getElementById('r2-qtd-pendentes').innerText = countPendentes + countVencidos;
+            
+            let btnPendente = document.getElementById('qtd-btn-pendentes'); if(btnPendente) btnPendente.innerText = countPendentes + countVencidos;
+            let btnPago = document.getElementById('qtd-btn-pagos'); if(btnPago) btnPago.innerText = countPagos;
+
+            let progress = 0; let divisorProgress = countPagos + countPendentes + countVencidos;
+            if(divisorProgress > 0) progress = (countPagos / divisorProgress) * 100;
+            
+            let elR2Prog = document.getElementById('r2-progress'); if(elR2Prog) elR2Prog.style.width = `${progress}%`;
+            let elDashProg = document.getElementById('dash-progress-fill'); if(elDashProg) elDashProg.style.width = `${progress}%`;
+            let elDashProgTxt = document.getElementById('dash-progress-text'); if(elDashProgTxt) elDashProgTxt.innerText = `${Math.round(progress)}%`;
+
+            let clisAtivos = listaClientesAba.filter(c => c.status !== 'Isento' && c.status !== 'Cancelado').length;
+            let elR2Ftodos = document.getElementById('r2-f-todos'); if(elR2Ftodos) elR2Ftodos.innerText = clisAtivos; 
+            let elR2Fpend = document.getElementById('r2-f-pendentes'); if(elR2Fpend) elR2Fpend.innerText = countPendentes + countVencidos; 
+            let elR2Fpag = document.getElementById('r2-f-pagos'); if(elR2Fpag) elR2Fpag.innerText = countPagos; 
+            let elR2TotLanc = document.getElementById('r2-total-lanc'); if(elR2TotLanc) elR2TotLanc.innerText = clisAtivos;
+
+            const canvasChart = document.getElementById('chartMetricas');
+            if(canvasChart) {
+                const ctx = canvasChart.getContext('2d');
+                if (window.metricasChart) window.metricasChart.destroy();
+                window.metricasChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Pagos', 'Pendentes', 'Vencidos', 'Bloqueados', 'Isentos', 'Cancelados'],
+                        datasets: [{
+                            data: [countPagos, countPendentes, countVencidos, countBloqueados, countIsentos, countCancelados],
+                            backgroundColor: ['#10B981', '#F59E0B', '#EF4444', '#000000', '#9CA3AF', '#7F1D1D'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: { color: document.body.classList.contains('dark-mode') ? '#F9FAFB' : '#333', font: { family: 'Inter', size: 10 }, boxWidth: 12 }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        function renderizarLista() {
+            const layoutAtual = localStorage.getItem('romaLayoutPref') || 'dashboard';
+            const container = document.getElementById('lista'); container.innerHTML = '';
+            
+            const cRoma1 = clientes.filter(c => c.unidade === 'Roma 1'); const cRoma2 = clientes.filter(c => c.unidade === 'Roma 2');
+            
+            // NOVIDADE: AQUI CALCULA OS APPs E ATUALIZA AS ABAS E MODAIS
+            const appRoma1 = cRoma1.filter(c => c.usaApp).length;
+            const appRoma2 = cRoma2.filter(c => c.usaApp).length;
+
+            document.getElementById('count-roma1').innerText = cRoma1.length; 
+            document.getElementById('count-roma2').innerText = cRoma2.length;
+            
+            let elAppR1 = document.getElementById('count-app-roma1'); if(elAppR1) elAppR1.innerText = appRoma1;
+            let elAppR2 = document.getElementById('count-app-roma2'); if(elAppR2) elAppR2.innerText = appRoma2;
+            
+            let elModCountR1 = document.getElementById('modal-count-r1'); if(elModCountR1) elModCountR1.innerText = cRoma1.length;
+            let elModCountR2 = document.getElementById('modal-count-r2'); if(elModCountR2) elModCountR2.innerText = cRoma2.length;
+            let elModAppR1 = document.getElementById('modal-app-r1'); if(elModAppR1) elModAppR1.innerText = appRoma1;
+            let elModAppR2 = document.getElementById('modal-app-r2'); if(elModAppR2) elModAppR2.innerText = appRoma2;
+            
+            let clientesAba = clientes.filter(c => c.unidade === abaAtual);
+            calcularMetricasDinâmicas(clientesAba);
+
+            const termoBusca = document.getElementById('inputBusca').value.toLowerCase(); 
+            if (termoBusca) clientesAba = clientesAba.filter(c => c.nome.toLowerCase().includes(termoBusca));
+            
+            let elBtnPend = document.getElementById('btnDashFiltroPendentes'); let elBtnPago = document.getElementById('btnDashFiltroPagos');
+            if(elBtnPend) elBtnPend.classList.remove('active-pendente'); if(elBtnPago) elBtnPago.classList.remove('active-pago');
+
+            if (layoutAtual === 'roma2') {
+                if (filtroRoma2Status === 'pendentes') clientesAba = clientesAba.filter(c => c.status !== 'Pago' && c.status !== 'Isento' && c.status !== 'Cancelado');
+                if (filtroRoma2Status === 'pagos') clientesAba = clientesAba.filter(c => c.status === 'Pago');
+            } else {
+                if (filtroDashStatus === 'pendentes') {
+                    if(elBtnPend) elBtnPend.classList.add('active-pendente');
+                    clientesAba = clientesAba.filter(c => c.status !== 'Pago' && c.status !== 'Isento' && c.status !== 'Cancelado');
+                } else if (filtroDashStatus === 'pagos') {
+                    if(elBtnPago) elBtnPago.classList.add('active-pago');
+                    clientesAba = clientesAba.filter(c => c.status === 'Pago');
+                }
+            }
+            
+            const hoje = new Date(); 
+            const indexMesAtual = hoje.getMonth(); 
+            const diaAtualReal = hoje.getDate();
+            const indexMesSelecionado = mesesDoAno.indexOf(mesSelecionado);
+
+            clientesAba.sort((a, b) => {
+                let isFiltrandoP = (layoutAtual === 'roma2' && filtroRoma2Status === 'pendentes') || (layoutAtual !== 'roma2' && filtroDashStatus === 'pendentes');
+                if (isFiltrandoP) {
+                    const aDev = (a.valorAtrasado && a.statusAtrasado === 'Pendente') ? 1 : 0; const bDev = (b.valorAtrasado && b.statusAtrasado === 'Pendente') ? 1 : 0;
+                    if (aDev !== bDev) return bDev - aDev;
+                }
+                if (ordemAtual === 'data') return a.diaVencimento - b.diaVencimento; else return a.nome.localeCompare(b.nome);
+            });
+
+            clientesAba.forEach(cliente => {
+                let statusBD = cliente.status || 'Pendente'; let statusVisor = statusBD; let textoBotao = statusBD; 
+                
+                if (statusBD === 'Pendente') {
+                    if (indexMesSelecionado < indexMesAtual) { statusVisor = 'Vencido'; textoBotao = 'Vencido'; } 
+                    else if (indexMesSelecionado === indexMesAtual && diaAtualReal > cliente.diaVencimento) { statusVisor = 'Vencido'; textoBotao = 'Vencido'; }
+                }
+                
+                const statusClass = statusVisor.toLowerCase(); 
+                
+                let atrasadoTag = ''; let r2AtrasoHtml = '';
+                if (cliente.valorAtrasado && cliente.mesAtrasado) {
+                    if (cliente.statusAtrasado === 'Pendente') {
+                        atrasadoTag = `<div class="status-badge" style="margin-bottom:4px;background:var(--vencido);color:white;" onclick="abrirModalPagamento('${cliente.id}', true)">⚠️ ${cliente.mesAtrasado.substring(0,3)}: R$ ${cliente.valorAtrasado}</div>`;
+                        r2AtrasoHtml = `<div class="r2-divida-badge" onclick="abrirModalPagamento('${cliente.id}', true)">⚠️ ${cliente.mesAtrasado}: R$ ${cliente.valorAtrasado}</div>`;
+                    } else if (cliente.statusAtrasado === 'Pago') {
+                        atrasadoTag = `<div class="status-badge pago" style="margin-bottom:4px;" onclick="abrirModalPagamento('${cliente.id}', true)">✅ ${cliente.mesAtrasado.substring(0,3)} Pago</div>`;
+                        r2AtrasoHtml = `<div class="r2-badge pago" style="margin-top:5px;" onclick="abrirModalPagamento('${cliente.id}', true)">✅ ${cliente.mesAtrasado} Pago</div>`;
+                    }
+                }
+
+                let logPagamentoTag = ''; let logAtrasoTag = '';
+                if (cliente.logPagamento) { 
+                    let classeLog = ''; 
+                    if (cliente.logPagamento.includes('Resta')) classeLog = 'log-parcial'; 
+                    if (cliente.logPagamento.includes('⛔')) classeLog = 'log-bloqueio'; 
+                    if (cliente.logPagamento.includes('⚪')) classeLog = 'log-isento'; 
+                    logPagamentoTag = `<p class="log-pagamento ${classeLog}">${cliente.logPagamento}</p>`; 
+                }
+                if (cliente.logPagamentoAtrasado) logAtrasoTag = `<p class="log-pagamento">${cliente.logPagamentoAtrasado}</p>`;
+
+                let badgeIconR2 = statusClass === 'pago' ? '✅ PAGO' : (statusClass === 'vencido' ? '⚠️ VENCIDO' : (statusClass === 'bloqueado' ? '⛔ BLOQ' : (statusClass === 'isento' ? '⚪ ISENTO' : (statusClass === 'cancelado' ? '❌ CANC.' : '⏳ PENDENTE'))));
+
+                let planClass = 'badge-default';
+                let nomePlano = cliente.plano || '';
+                if(nomePlano.includes('Básico') || nomePlano.includes('100 Mega')) planClass = 'badge-basico';
+                else if(nomePlano.includes('Premium') || nomePlano.includes('250 Mega')) planClass = 'badge-premium';
+                else if(nomePlano.includes('Gold') || nomePlano.includes('400 Mega')) planClass = 'badge-gold';
+                else if(nomePlano.includes('Diamante') || nomePlano.includes('500 Mega')) planClass = 'badge-diamante';
+
+                const planoSelo = nomePlano ? `<span class="plano-badge ${planClass}"><i class="fa-solid fa-wifi"></i> ${nomePlano}</span>` : '';
+                
+                let initL = (cliente.nome || 'C').charAt(0).toUpperCase();
+
+                const card = document.createElement('div');
+                
+                if (layoutAtual === 'roma2') {
+                    let planoR2 = cliente.plano ? ` • ${cliente.plano}` : '';
+                    
+                    card.className = `r2-client-card ${statusClass}`; 
+                    if(statusClass === 'cancelado') card.style.opacity = '0.5';
+                    if(statusClass === 'isento') card.style.opacity = '0.7';
+
+                    card.innerHTML = `
+                        <div class="r2-card-top">
+                            <div class="r2-c-left">
+                                <div class="r2-avatar">${initL}</div>
+                                <div class="r2-c-info">
+                                    <h4>${cliente.nome}</h4>
+                                    <p>📅 Dia ${cliente.diaVencimento}${planoR2}</p>
+                                    ${r2AtrasoHtml}
+                                    ${logPagamentoTag}
+                                </div>
+                            </div>
+                            <div class="r2-c-right">
+                                <h3 class="dash-blur-target">R$ ${cliente.valor}</h3>
+                                <div class="r2-badge ${statusClass}" onclick="abrirModalPagamento('${cliente.id}', false)">${badgeIconR2}</div>
+                            </div>
+                        </div>
+                        <div class="r2-card-bottom">
+                            <button class="r2-btn-action wpp" onclick="abrirModalWpp('${cliente.id}')"><i class="fa-brands fa-whatsapp" style="font-size:14px;"></i> Lembrete</button>
+                            <button class="r2-btn-action pdf" onclick="gerarReciboDireto('${cliente.id}')"><i class="fa-solid fa-file-pdf" style="font-size:14px;"></i> PDF</button>
+                            <button class="r2-btn-action ia" onclick="abrirModalCliente('${cliente.id}')"><i class="fa-solid fa-pen-to-square" style="font-size:14px;"></i> Editar</button>
+                            <button class="r2-btn-action del" onclick="deletarDireto('${cliente.id}')"><i class="fa-solid fa-trash" style="font-size:14px;"></i></button>
+                        </div>
+                    `;
+                } else {
+                    card.className = `card ${statusClass}`;
+                    const obsTag = cliente.observacao ? `<br>• ${cliente.observacao}` : '';
+                    const appSelo = cliente.usaApp ? `<span class="app-badge"><i class="fa-solid fa-tv"></i></span>` : '';
+                    
+                    card.innerHTML = `
+                        <div class="card-left">
+                            <div class="date-badge">${cliente.diaVencimento}</div>
+                            <div class="info">
+                                <h3>${cliente.nome}</h3>
+                                <div class="status-badge ${statusClass}" onclick="abrirModalPagamento('${cliente.id}', false)">${textoBotao} 🔄</div>
+                                ${atrasadoTag}
+                                ${appSelo}
+                                <div style="margin-top: 5px;">${planoSelo}</div>
+                                <p style="margin-top: 2px;">${obsTag}</p>
+                                ${logPagamentoTag}
+                                ${logAtrasoTag}
+                            </div>
+                        </div>
+                        <div class="card-right">
+                            <div class="card-price dash-blur-target">R$ ${cliente.valor}</div>
+                            <div class="actions">
+                                <button class="action-btn btn-pdf" onclick="gerarReciboDireto('${cliente.id}')" title="Gerar PDF"><i class="fa-solid fa-file-pdf"></i></button>
+                                <button class="action-btn btn-wpp" onclick="abrirModalWpp('${cliente.id}')" title="WhatsApp"><i class="fa-brands fa-whatsapp" style="font-size:18px;"></i></button>
+                                <button class="action-btn btn-edit" onclick="abrirModalCliente('${cliente.id}')" title="Editar Cliente"><i class="fa-solid fa-pen-to-square"></i></button>
+                            </div>
+                        </div>`;
+                }
+                container.appendChild(card);
+            });
+            aplicarPrivacy();
+        }
+
+        function abrirModalMetricas() { 
+            setTimeout(() => { if(window.metricasChart) window.metricasChart.resize(); }, 100);
+            document.getElementById('modalMetricas').style.display = 'flex'; 
+        }
+
+        function gerarBotoesMeses() { const grid = document.getElementById('gridMeses'); grid.innerHTML = ''; mesesDoAno.forEach(mes => { const btn = document.createElement('button'); btn.className = `mes-btn ${mes === mesSelecionado ? 'active' : ''}`; btn.innerText = mes; btn.onclick = () => alternarMes(mes); grid.appendChild(btn); }); }
+        function abrirModalMes() { gerarBotoesMeses(); document.getElementById('modalMes').style.display = 'flex'; }
+        
+        function mudarAba(aba) { 
+            abaAtual = aba; 
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active')); 
+            document.getElementById(`tab-${aba}`)?.classList.add('active'); 
+            
+            let label = aba === 'Roma 1' ? 'Roma 1' : 'Roma 2';
+            let lblEl = document.getElementById('lblUnidadeR2');
+            if(lblEl) lblEl.innerText = label;
+
+            const botoesU = document.querySelectorAll('.unidade-btn');
+            botoesU.forEach(b => b.classList.remove('active'));
+            if(aba === 'Roma 1') { document.getElementById('btn-unidade-r1')?.classList.add('active'); }
+            else { document.getElementById('btn-unidade-r2')?.classList.add('active'); }
+
+            renderizarLista(); 
+        }
+
+        function abrirModalCliente(id = null) {
+            document.getElementById('modalCliente').style.display = 'flex';
+            if (id) {
+                const c = clientes.find(x => x.id === id); 
+                document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-user-pen"></i> Editar Cliente'; 
+                document.getElementById('cliId').value = c.id; 
+                document.getElementById('cliNome').value = c.nome; 
+                document.getElementById('cliNomeCompleto').value = c.nomeCompleto || ''; 
+                document.getElementById('cliTelefone').value = c.telefone || ''; 
+                document.getElementById('cliDia').value = c.diaVencimento;
+                
+                let planoBD = c.plano || ''; document.getElementById('cliPlano').value = planoBD; const botoes = document.querySelectorAll('.plano-btn'); botoes.forEach(b => b.classList.remove('active'));
+                
+                if (planoBD.includes('Básico') || planoBD.includes('100 Mega')) botoes[0].classList.add('active'); 
+                else if (planoBD.includes('Premium') || planoBD.includes('250 Mega')) botoes[1].classList.add('active'); 
+                else if (planoBD.includes('Gold') || planoBD.includes('400 Mega')) botoes[2].classList.add('active'); 
+                else if (planoBD.includes('Diamante') || planoBD.includes('500 Mega')) botoes[3].classList.add('active'); 
+                else botoes[4].classList.add('active');
+                
+                document.getElementById('cliValor').value = c.valor === 'Padrão' ? '' : c.valor; 
+                
+                document.getElementById('cliRua').value = c.rua || c.endereco || ''; 
+                document.getElementById('cliNumero').value = c.numero || ''; 
+                document.getElementById('cliBairro').value = c.bairro || ''; 
+                
+                document.getElementById('cliObs').value = c.observacao || ''; 
+                document.getElementById('cliUnidade').value = c.unidade; document.getElementById('cliApp').checked = c.usaApp || false;
+                
+                document.getElementById('btnDeletarModal').style.display = 'block'; 
+                document.getElementById('btnGerarReciboModal').style.display = 'block'; 
+            } else {
+                document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-user-plus"></i> Novo Cliente'; 
+                document.getElementById('cliId').value = ''; 
+                document.getElementById('cliNome').value = ''; 
+                document.getElementById('cliNomeCompleto').value = ''; 
+                document.getElementById('cliTelefone').value = ''; 
+                document.getElementById('cliDia').value = ''; 
+                document.getElementById('cliPlano').value = '';
+                
+                const botoes = document.querySelectorAll('.plano-btn'); botoes.forEach(b => b.classList.remove('active')); botoes[4].classList.add('active');
+                document.getElementById('cliValor').value = ''; 
+                
+                document.getElementById('cliRua').value = ''; 
+                document.getElementById('cliNumero').value = ''; 
+                document.getElementById('cliBairro').value = ''; 
+
+                document.getElementById('cliObs').value = ''; document.getElementById('cliUnidade').value = abaAtual; document.getElementById('cliApp').checked = false;
+                
+                document.getElementById('btnDeletarModal').style.display = 'none';
+                document.getElementById('btnGerarReciboModal').style.display = 'none';
+            }
+        }
+
+        function abrirModalWpp(id) { clienteSelecionadoWpp = clientes.find(c => c.id === id); document.getElementById('modalWpp').style.display = 'flex'; const botoes = document.querySelectorAll('.tone-btn'); botoes.forEach(b => b.classList.remove('active')); botoes[0].classList.add('active'); gerarTextoWpp('gentil'); }
+        function mudarTom(tom, elementoBotao) { document.querySelectorAll('.tone-btn').forEach(b => b.classList.remove('active')); elementoBotao.classList.add('active'); gerarTextoWpp(tom); }
+
+        function gerarTextoWpp(tom) {
+            if(!clienteSelecionadoWpp) return; const c = clienteSelecionadoWpp; const mesFormatado = mesSelecionado.toUpperCase(); const valorFormat = c.valor === 'Padrão' ? 'R$ 100,00' : `R$ ${c.valor}`; const infoPix = `\n\n${pixUsuario}`; let texto = "";
+            if (tom === 'gentil') texto = `Olá ${c.nome}! Passando para lembrar da mensalidade da Roma Telecom do mês de ${mesFormatado} no valor de ${valorFormat}.${infoPix}`;
+            else if (tom === 'hoje') texto = `Oi ${c.nome}! Tudo bem? Seu vencimento da internet é hoje (Dia ${c.diaVencimento}). O valor é ${valorFormat}.${infoPix}`;
+            else if (tom === 'cobranca') texto = `Olá ${c.nome}, notamos que o pagamento da sua internet no valor de ${valorFormat} consta como pendente.\nPara evitar a suspensão do serviço, por favor, realize o PIX abaixo:${infoPix}`;
+            else if (tom === 'recibo') texto = `*RECIBO - ROMA TELECOM*\n\n*Cliente:* ${c.nome}\n*Referencia:* Mês de ${mesFormatado}\n*Valor:* ${valorFormat}\n\nPagamento recebido com sucesso. A Roma Telecom agradece a preferencia!`;
+            document.getElementById('wppTexto').value = texto;
+        }
+
+        function enviarWhatsApp() { const texto = document.getElementById('wppTexto').value; let fone = clienteSelecionadoWpp.telefone; let url = fone && fone.length >= 10 ? `https://wa.me/${!fone.startsWith("55") ? "55" + fone : fone}?text=${encodeURIComponent(texto)}` : `https://wa.me/?text=${encodeURIComponent(texto)}`; window.open(url, '_blank'); }
+        function fecharModal(id) { document.getElementById(id).style.display = 'none'; }
+        window.onclick = function(event) { if (event.target.className === 'modal-overlay') event.target.style.display = 'none'; }
+    </script>
+</body>
+</html>
