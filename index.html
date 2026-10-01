@@ -859,36 +859,168 @@
         function togglePrivacy() { privacyMode = !privacyMode; localStorage.setItem('romaPrivacy', privacyMode); aplicarPrivacy(); }
 
         async function sincronizarDividasMesAnterior() {
-            const indexMesAtual = mesesDoAno.indexOf(mesSelecionado);
-            if(indexMesAtual <= 0) return; 
-            const mesAnterior = mesesDoAno[indexMesAtual - 1];
-            try {
-                const docAnt = await db.collection("usuarios").doc(usuarioAtual.uid).collection("meses_roma").doc(mesAnterior).get();
-                if(docAnt.exists) {
-                    const clisAnt = docAnt.data().clientes || [];
-                    let precisaSalvar = false;
-                    clientes.forEach(cAtual => {
-                        const cAnt = clisAnt.find(x => x.id === cAtual.id);
-                        if(cAnt) {
-                            if(cAnt.status !== 'Pago' && cAnt.status !== 'Isento' && cAnt.status !== 'Cancelado') {
-                                if(cAtual.statusAtrasado !== 'Pendente' || cAtual.valorAtrasado !== cAnt.valor) {
-                                    cAtual.valorAtrasado = cAnt.valor; cAtual.mesAtrasado = mesAnterior; cAtual.statusAtrasado = 'Pendente'; precisaSalvar = true;
-                                }
-                            } else if (cAnt.status === 'Pago') {
-                                if(cAtual.valorAtrasado && cAtual.statusAtrasado !== 'Pago') {
-                                    cAtual.statusAtrasado = 'Pago'; cAtual.logPagamentoAtrasado = `✅ ${mesAnterior} Pago`; precisaSalvar = true;
-                                }
-                            } else if (cAnt.status === 'Isento' || cAnt.status === 'Cancelado') {
-                                if(cAtual.valorAtrasado) {
-                                    cAtual.valorAtrasado = null; cAtual.mesAtrasado = null; cAtual.statusAtrasado = null; cAtual.logPagamentoAtrasado = ''; precisaSalvar = true;
-                                }
-                            }
-                        }
-                    });
-                    if(precisaSalvar) { await db.collection("usuarios").doc(usuarioAtual.uid).collection("meses_roma").doc(mesSelecionado).set({ clientes: clientes }); renderizarLista(); }
+    const indexMesAtual = mesesDoAno.indexOf(mesSelecionado);
+    if(indexMesAtual <= 0 || !usuarioAtual) return;
+
+    const mesAnterior = mesesDoAno[indexMesAtual - 1];
+
+    try {
+        // Busca os clientes do mês anterior
+        const docAnt = await db.collection("usuarios")
+            .doc(usuarioAtual.uid)
+            .collection("meses_roma")
+            .doc(mesAnterior)
+            .get();
+
+        if(!docAnt.exists) return;
+
+        const clientesMesAnterior = docAnt.data().clientes || [];
+
+        // Cria uma lista com os IDs que já existem no mês atual
+        const idsClientesAtuais = new Set(
+            clientes.map(cliente => cliente.id)
+        );
+
+        let houveAlteracao = false;
+
+        // =========================================================
+        // 1 - ADICIONA NO MÊS ATUAL OS CLIENTES QUE ESTÃO FALTANDO
+        // =========================================================
+
+        clientesMesAnterior.forEach(clienteAnterior => {
+
+            // Se o cliente já existe no mês atual, não mexe nele
+            if(idsClientesAtuais.has(clienteAnterior.id)) {
+                return;
+            }
+
+            // Cliente existe no mês anterior, mas não existe no mês atual
+            const novoCliente = JSON.parse(
+                JSON.stringify(clienteAnterior)
+            );
+
+            // Nova mensalidade começa como PENDENTE
+            novoCliente.status = 'Pendente';
+            novoCliente.logPagamento = '';
+
+            // Remove qualquer informação de atraso antiga
+            novoCliente.valorAtrasado = null;
+            novoCliente.mesAtrasado = null;
+            novoCliente.statusAtrasado = null;
+            novoCliente.logPagamentoAtrasado = '';
+
+            // Recupera o valor original do plano
+            novoCliente.valor = obterValorOriginalPlano(
+                novoCliente.plano,
+                novoCliente.valor
+            );
+
+            // Adiciona o cliente ao mês atual
+            clientes.push(novoCliente);
+
+            // Atualiza a lista de IDs
+            idsClientesAtuais.add(novoCliente.id);
+
+            houveAlteracao = true;
+        });
+
+
+        // =========================================================
+        // 2 - SINCRONIZA AS DÍVIDAS DO MÊS ANTERIOR
+        // =========================================================
+
+        clientes.forEach(cAtual => {
+
+            const cAnt = clientesMesAnterior.find(
+                x => x.id === cAtual.id
+            );
+
+            if(!cAnt) return;
+
+
+            // Cliente ficou pendente no mês anterior
+            if(
+                cAnt.status !== 'Pago' &&
+                cAnt.status !== 'Isento' &&
+                cAnt.status !== 'Cancelado'
+            ) {
+
+                if(
+                    cAtual.statusAtrasado !== 'Pendente' ||
+                    cAtual.valorAtrasado !== cAnt.valor ||
+                    cAtual.mesAtrasado !== mesAnterior
+                ) {
+
+                    cAtual.valorAtrasado = cAnt.valor;
+                    cAtual.mesAtrasado = mesAnterior;
+                    cAtual.statusAtrasado = 'Pendente';
+                    cAtual.logPagamentoAtrasado = '';
+
+                    houveAlteracao = true;
                 }
-            } catch(e) {}
+
+            }
+
+            // Cliente pagou o mês anterior
+            else if(cAnt.status === 'Pago') {
+
+                if(
+                    cAtual.valorAtrasado &&
+                    cAtual.statusAtrasado !== 'Pago'
+                ) {
+
+                    cAtual.statusAtrasado = 'Pago';
+                    cAtual.logPagamentoAtrasado =
+                        `✅ ${mesAnterior} Pago`;
+
+                    houveAlteracao = true;
+                }
+
+            }
+
+            // Cliente foi isento ou cancelado no mês anterior
+            else if(
+                cAnt.status === 'Isento' ||
+                cAnt.status === 'Cancelado'
+            ) {
+
+                if(cAtual.valorAtrasado) {
+
+                    cAtual.valorAtrasado = null;
+                    cAtual.mesAtrasado = null;
+                    cAtual.statusAtrasado = null;
+                    cAtual.logPagamentoAtrasado = '';
+
+                    houveAlteracao = true;
+                }
+            }
+        });
+
+
+        // =========================================================
+        // 3 - SALVA O MÊS ATUAL SOMENTE SE HOUVE ALTERAÇÃO
+        // =========================================================
+
+        if(houveAlteracao) {
+
+            await db.collection("usuarios")
+                .doc(usuarioAtual.uid)
+                .collection("meses_roma")
+                .doc(mesSelecionado)
+                .set({
+                    clientes: clientes
+                });
+
+            renderizarLista();
         }
+
+    } catch(e) {
+        console.error(
+            "Erro ao sincronizar mês anterior:",
+            e
+        );
+    }
+}
 
         async function inicializarApp() {
             if(!usuarioAtual) return; mostrarLoading(true, "Carregando Gaveta...");
