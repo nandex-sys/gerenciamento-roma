@@ -25,7 +25,8 @@ jobs:
 
       - name: Criar Projeto Cordova e Compilar
         run: |
-          cordova create build_app com.roma.gerenciamento "gerenciamento-roma"
+          # Define o nome "ROMA TELECOM GERENCIAMENTO" para o aplicativo Android
+          cordova create build_app com.roma.gerenciamento "ROMA TELECOM GERENCIAMENTO"
           cp index.html build_app/www/
           
           # Configura o icone do aplicativo e copia a logo para o app
