@@ -1630,12 +1630,14 @@
         function sincronizarClientesDoMes() {
             if (typeof clientes === 'undefined' || !Array.isArray(clientes)) return;
 
+            const mesAtual = (typeof mesSelecionado !== 'undefined' && mesSelecionado) ? mesSelecionado : 'Outubro';
+
             clientes.forEach(c => {
                 if (!c.status) c.status = 'Pendente';
                 if (!c.historico) c.historico = {};
                 
-                if (typeof mesSelecionado !== 'undefined' && mesSelecionado && !c.historico[mesSelecionado]) {
-                    c.historico[mesSelecionado] = {
+                if (!c.historico[mesAtual]) {
+                    c.historico[mesAtual] = {
                         status: 'Pendente',
                         valor: c.valor || '100,00',
                         log: ''
@@ -1646,19 +1648,17 @@
             if (typeof salvarDados === 'function') salvarDados();
         }
 
-        // FORÇA o reset do mês selecionado recarregando TODOS os clientes do sistema
+        // FORÇA a reconstrução do mês puxando todos os clientes da memória
         function resetarEForcarSincronizacaoMes() {
             const mesAtual = (typeof mesSelecionado !== 'undefined' && mesSelecionado) ? mesSelecionado : 'Outubro';
             
-            if (!confirm(`Deseja resetar e puxar TODOS os clientes cadastrados para o mês de ${mesAtual}?`)) {
+            if (!confirm(`Deseja sincronizar e puxar TODOS os clientes para o mês de ${mesAtual}?`)) {
                 return;
             }
 
-            if (typeof clientes !== 'undefined' && Array.isArray(clientes)) {
+            if (typeof clientes !== 'undefined' && Array.isArray(clientes) && clientes.length > 0) {
                 clientes.forEach(c => {
                     if (!c.historico) c.historico = {};
-                    
-                    // Recria/sobrescreve forçadamente o mês atual para garantir que o cliente apareça
                     c.historico[mesAtual] = {
                         status: 'Pendente',
                         valor: c.valor || '100,00',
@@ -1669,36 +1669,37 @@
 
                 if (typeof salvarDados === 'function') salvarDados();
                 if (typeof renderizarLista === 'function') renderizarLista();
-                alert(`Mês de ${mesAtual} resetado com sucesso! Todos os clientes foram puxados.`);
+                alert(`Sucesso! ${clientes.length} clientes foram sincronizados no mês de ${mesAtual}.`);
             } else {
-                alert('Nenhum cliente encontrado na memória.');
+                alert('Atenção: Nenhum cliente foi encontrado na memória LocalStorage.');
             }
         }
 
-        // Injeta o botão vermelho de Reset automaticamente no canto inferior esquerdo da tela
+        // Injeção forçada e infalível do botão vermelho no topo da tela
         function injetarBotaoResetNaTela() {
             if (document.getElementById('btnResetMesJS')) return;
 
             const btn = document.createElement('button');
             btn.id = 'btnResetMesJS';
-            btn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> Resetar Mês Atual';
-            btn.style.cssText = 'position: fixed; bottom: 15px; left: 15px; z-index: 99999; background: #e74c3c; color: white; border: none; padding: 10px 14px; border-radius: 8px; font-weight: bold; font-size: 0.85rem; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3);';
+            btn.innerHTML = '🔄 RESETAR MÊS ATUAL';
+            btn.style.cssText = 'position: fixed; top: 12px; right: 12px; z-index: 999999; background: #e74c3c; color: #ffffff; border: 2px solid #ffffff; padding: 8px 14px; border-radius: 8px; font-weight: bold; font-size: 0.85rem; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.5);';
             btn.onclick = resetarEForcarSincronizacaoMes;
-            
-            document.body.appendChild(btn);
+
+            const renderBtn = () => {
+                if (document.body && !document.getElementById('btnResetMesJS')) {
+                    document.body.appendChild(btn);
+                }
+            };
+
+            renderBtn();
+            window.addEventListener('DOMContentLoaded', renderBtn);
+            window.addEventListener('load', renderBtn);
+            setTimeout(renderBtn, 500);
         }
 
-        // Executa automaticamente a injeção do botão e a sincronização
-        window.addEventListener('DOMContentLoaded', function() {
-            sincronizarClientesDoMes();
-            injetarBotaoResetNaTela();
-            if (typeof renderizarLista === 'function') renderizarLista();
-        });
-
-        if (document.readyState === 'complete' || document.readyState === 'interactive') {
-            sincronizarClientesDoMes();
-            injetarBotaoResetNaTela();
-        }
+        // Inicia injeção imediata
+        sincronizarClientesDoMes();
+        injetarBotaoResetNaTela();
 
         // ==========================================
         // FECHAMENTO DE MODAIS E EVENTOS
