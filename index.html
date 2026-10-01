@@ -1612,7 +1612,7 @@
 
         function enviarWhatsApp() { const texto = document.getElementById('wppTexto').value; let fone = clienteSelecionadoWpp.telefone; let url = fone && fone.length >= 10 ? `https://wa.me/${!fone.startsWith("55") ? "55" + fone : fone}?text=${encodeURIComponent(texto)}` : `https://wa.me/?text=${encodeURIComponent(texto)}`; window.open(url, '_blank'); }
         // ==========================================
-        // GESTÃO, SINCRONIZAÇÃO E RESET DO MÊS
+        // MIGRAÇÃO DIRETA: APAGAR OUTUBRO E COPIAR SETEMBRO
         // ==========================================
         function alternarMes(mes) {
             mesSelecionado = mes;
@@ -1621,85 +1621,75 @@
             const btnMesR2 = document.getElementById('btnMesSelecionadoR2');
             if (btnMesR2) btnMesR2.innerText = mes;
 
-            sincronizarClientesDoMes();
             fecharModal('modalMes');
             if (typeof renderizarLista === 'function') renderizarLista();
         }
 
-        // Garante que TODOS os clientes tenham registro no mês selecionado
-        function sincronizarClientesDoMes() {
-            if (typeof clientes === 'undefined' || !Array.isArray(clientes)) return;
-
-            const mesAtual = (typeof mesSelecionado !== 'undefined' && mesSelecionado) ? mesSelecionado : 'Outubro';
-
-            clientes.forEach(c => {
-                if (!c.status) c.status = 'Pendente';
-                if (!c.historico) c.historico = {};
-                
-                if (!c.historico[mesAtual]) {
-                    c.historico[mesAtual] = {
-                        status: 'Pendente',
-                        valor: c.valor || '100,00',
-                        log: ''
-                    };
-                }
-            });
-
-            if (typeof salvarDados === 'function') salvarDados();
-        }
-
-        // FORÇA a reconstrução do mês puxando todos os clientes da memória
-        function resetarEForcarSincronizacaoMes() {
-            const mesAtual = (typeof mesSelecionado !== 'undefined' && mesSelecionado) ? mesSelecionado : 'Outubro';
-            
-            if (!confirm(`Deseja sincronizar e puxar TODOS os clientes para o mês de ${mesAtual}?`)) {
+        // APAGA O MÊS DE OUTUBRO E COPIA TODOS OS CLIENTES DE SETEMBRO
+        function forcarCopiarSetembroParaOutubro() {
+            if (typeof clientes === 'undefined' || !Array.isArray(clientes) || clientes.length === 0) {
+                alert('Nenhum cliente cadastrado no sistema foi encontrado.');
                 return;
             }
 
-            if (typeof clientes !== 'undefined' && Array.isArray(clientes) && clientes.length > 0) {
-                clientes.forEach(c => {
-                    if (!c.historico) c.historico = {};
-                    c.historico[mesAtual] = {
-                        status: 'Pendente',
-                        valor: c.valor || '100,00',
-                        log: ''
-                    };
-                    c.status = 'Pendente';
-                });
-
-                if (typeof salvarDados === 'function') salvarDados();
-                if (typeof renderizarLista === 'function') renderizarLista();
-                alert(`Sucesso! ${clientes.length} clientes foram sincronizados no mês de ${mesAtual}.`);
-            } else {
-                alert('Atenção: Nenhum cliente foi encontrado na memória LocalStorage.');
+            if (!confirm('Atenção: Deseja APAGAR o mês de Outubro atual e COPIAR todos os clientes de Setembro para Outubro?')) {
+                return;
             }
+
+            let totalMigrados = 0;
+
+            clientes.forEach(c => {
+                if (!c.historico) c.historico = {};
+
+                // 1. Apaga totalmente o mês de Outubro anterior para tirar dados corrompidos
+                delete c.historico['Outubro'];
+                delete c.historico['outubro'];
+                delete c.historico['OUTUBRO'];
+
+                // 2. Busca o histórico de Setembro do cliente
+                const dadosSet = c.historico['Setembro'] || c.historico['setembro'] || c.historico['SETEMBRO'];
+
+                // 3. Força a criação do registro em Outubro para todos os clientes
+                c.historico['Outubro'] = {
+                    status: 'Pendente',
+                    valor: (dadosSet && dadosSet.valor) ? dadosSet.valor : (c.valor || '100,00'),
+                    log: ''
+                };
+
+                c.status = 'Pendente';
+                totalMigrados++;
+            });
+
+            // Salva no banco/localStorage e atualiza a tela
+            if (typeof salvarDados === 'function') salvarDados();
+            if (typeof renderizarLista === 'function') renderizarLista();
+
+            alert(`Mês de Outubro foi recriado! ${totalMigrados} clientes de Setembro foram copiados para Outubro.`);
         }
 
-        // Injeção forçada e infalível do botão vermelho no topo da tela
-        function injetarBotaoResetNaTela() {
-            if (document.getElementById('btnResetMesJS')) return;
+        // Injeta o botão vermelho de cópia/reset no topo direito da tela
+        function injetarBotaoCopiarSetembro() {
+            if (document.getElementById('btnCopiarSetembroJS')) return;
 
             const btn = document.createElement('button');
-            btn.id = 'btnResetMesJS';
-            btn.innerHTML = '🔄 RESETAR MÊS ATUAL';
-            btn.style.cssText = 'position: fixed; top: 12px; right: 12px; z-index: 999999; background: #e74c3c; color: #ffffff; border: 2px solid #ffffff; padding: 8px 14px; border-radius: 8px; font-weight: bold; font-size: 0.85rem; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.5);';
-            btn.onclick = resetarEForcarSincronizacaoMes;
+            btn.id = 'btnCopiarSetembroJS';
+            btn.innerHTML = '📋 COPIAR SETEMBRO ➔ OUTUBRO';
+            btn.style.cssText = 'position: fixed; top: 10px; right: 10px; z-index: 999999; background: #c0392b; color: #ffffff; border: 2px solid #ffffff; padding: 10px 14px; border-radius: 8px; font-weight: bold; font-size: 0.85rem; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.5);';
+            btn.onclick = forcarCopiarSetembroParaOutubro;
 
-            const renderBtn = () => {
-                if (document.body && !document.getElementById('btnResetMesJS')) {
+            const render = () => {
+                if (document.body && !document.getElementById('btnCopiarSetembroJS')) {
                     document.body.appendChild(btn);
                 }
             };
 
-            renderBtn();
-            window.addEventListener('DOMContentLoaded', renderBtn);
-            window.addEventListener('load', renderBtn);
-            setTimeout(renderBtn, 500);
+            render();
+            window.addEventListener('DOMContentLoaded', render);
+            window.addEventListener('load', render);
+            setTimeout(render, 400);
         }
 
-        // Inicia injeção imediata
-        sincronizarClientesDoMes();
-        injetarBotaoResetNaTela();
+        injetarBotaoCopiarSetembro();
 
         // ==========================================
         // FECHAMENTO DE MODAIS E EVENTOS
