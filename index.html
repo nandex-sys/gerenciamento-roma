@@ -319,6 +319,15 @@
         .loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; }
         .spinner { border: 4px solid #333; border-top: 4px solid var(--roma-orange); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 10px;}
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+   /* CORREÇÃO DO TAMANHO DA LOGO */
+        img, .logo, .logo-container img {
+            max-width: 250px !important;
+            width: 100% !important;
+            height: auto !important;
+            display: block !important;
+            margin: 15px auto !important;
+            object-fit: contain !important;
+        }
     </style>
 </head>
 <body>
