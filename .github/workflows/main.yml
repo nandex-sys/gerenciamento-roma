@@ -27,6 +27,13 @@ jobs:
         run: |
           cordova create build_app com.roma.gerenciamento "gerenciamento-roma"
           cp index.html build_app/www/
+          
+          # Configura a imagem icon.jpg como icone do aplicativo
+          if [ -f "icon.jpg" ]; then
+            cp icon.jpg build_app/www/icon.jpg
+            sed -i '/<\/widget>/i \    <icon src="www/icon.jpg" />' build_app/config.xml
+          fi
+
           cd build_app
           cordova platform add android
           cordova build android --verbose
