@@ -1273,7 +1273,296 @@
             document.getElementById('r2-qtd-pagos').innerText = countPagos; document.getElementById('r2-qtd-pendentes').innerText = countPendentes + countVencidos;
             
             let btnPendente = document.getElementById('qtd-btn-pendentes'); if(btnPendente) btnPendente.innerText = countPendentes + countVencidos;
-            let btnPago = document.getElementById('qtd-btn-pagos'); if(btnPago) btnPago.innerText = countPagos;
+           let btnPago = document.getElementById('qtd-btn-pagos'); if(btnPago) btnPago.innerText = countPagos;
+        }
+
+        function fecharModal(idModal) {
+            document.getElementById(idModal).style.display = 'none';
+        }
+
+        function mudarAba(novaAba) {
+            abaAtual = novaAba;
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            const tabEl = document.getElementById(`tab-${novaAba}`);
+            if (tabEl) tabEl.classList.add('active');
+            renderizarLista();
+        }
+
+        function abrirModalMes() {
+            const grid = document.getElementById('gridMeses');
+            grid.innerHTML = '';
+            mesesDoAno.forEach(m => {
+                const btn = document.createElement('button');
+                btn.className = `mes-btn ${m === mesSelecionado ? 'active' : ''}`;
+                btn.innerText = m;
+                btn.onclick = () => alternarMes(m);
+                grid.appendChild(btn);
+            });
+            document.getElementById('modalMes').style.display = 'flex';
+        }
+
+        function abrirModalCliente(id = null) {
+            document.getElementById('cliId').value = id || '';
+            const modalTitle = document.getElementById('modalTitle');
+            const btnDeletar = document.getElementById('btnDeletarModal');
+            const btnRecibo = document.getElementById('btnGerarReciboModal');
+
+            if (id) {
+                const c = clientes.find(x => x.id === id);
+                if (!c) return;
+                modalTitle.innerHTML = '<i class="fa-solid fa-user-pen"></i> Editar Cliente';
+                document.getElementById('cliNome').value = c.nome || '';
+                document.getElementById('cliNomeCompleto').value = c.nomeCompleto || '';
+                document.getElementById('cliTelefone').value = c.telefone || '';
+                document.getElementById('cliRua').value = c.rua || '';
+                document.getElementById('cliNumero').value = c.numero || '';
+                document.getElementById('cliBairro').value = c.bairro || '';
+                document.getElementById('cliCep').value = c.cep || '68400-000';
+                document.getElementById('cliCidade').value = c.cidade || 'Cametá-PA';
+                document.getElementById('cliDia').value = c.diaVencimento || '';
+                document.getElementById('cliValor').value = c.valor || '';
+                document.getElementById('cliPlano').value = c.plano || '';
+                document.getElementById('cliObs').value = c.observacao || '';
+                document.getElementById('cliUnidade').value = c.unidade || 'Roma 1';
+                document.getElementById('cliApp').checked = !!c.usaApp;
+                btnDeletar.style.display = 'block';
+                btnRecibo.style.display = (c.status === 'Pago') ? 'block' : 'none';
+            } else {
+                modalTitle.innerHTML = '<i class="fa-solid fa-user-plus"></i> Novo Cliente';
+                document.getElementById('cliNome').value = '';
+                document.getElementById('cliNomeCompleto').value = '';
+                document.getElementById('cliTelefone').value = '';
+                document.getElementById('cliRua').value = '';
+                document.getElementById('cliNumero').value = '';
+                document.getElementById('cliBairro').value = '';
+                document.getElementById('cliCep').value = '68400-000';
+                document.getElementById('cliCidade').value = 'Cametá-PA';
+                document.getElementById('cliDia').value = '';
+                document.getElementById('cliValor').value = '';
+                document.getElementById('cliPlano').value = '';
+                document.getElementById('cliObs').value = '';
+                document.getElementById('cliUnidade').value = abaAtual;
+                document.getElementById('cliApp').checked = false;
+                btnDeletar.style.display = 'none';
+                btnRecibo.style.display = 'none';
+            }
+            document.getElementById('modalCliente').style.display = 'flex';
+        }
+
+        function abrirModalMetricas() {
+            renderizarGraficoMetricas();
+            document.getElementById('modalMetricas').style.display = 'flex';
+        }
+
+        let chartInstance = null;
+        function renderizarGraficoMetricas() {
+            const ctx = document.getElementById('chartMetricas');
+            if (!ctx) return;
+            
+            const clientesAba = clientes.filter(c => c.unidade === abaAtual);
+            let pagos = 0, pendentes = 0, vencidos = 0;
+            const hoje = new Date();
+            const indexMesAtual = hoje.getMonth();
+            const diaAtualReal = hoje.getDate();
+            const indexMesSelecionado = mesesDoAno.indexOf(mesSelecionado);
+
+            clientesAba.forEach(c => {
+                if (c.status === 'Pago') pagos++;
+                else if (c.status === 'Isento' || c.status === 'Cancelado') return;
+                else {
+                    let isVencido = (indexMesSelecionado < indexMesAtual) || (indexMesSelecionado === indexMesAtual && diaAtualReal > c.diaVencimento);
+                    if (isVencido) vencidos++;
+                    else pendentes++;
+                }
+            });
+
+            if (chartInstance) chartInstance.destroy();
+
+            chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Pagos', 'Pendentes', 'Vencidos'],
+                    datasets: [{
+                        data: [pagos, pendentes, vencidos],
+                        backgroundColor: ['#10B981', '#F59E0B', '#EF4444'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#888' } }
+                    }
+                }
+            });
+        }
+
+        function abrirModalWpp(id) {
+            clienteSelecionadoWpp = clientes.find(x => x.id === id);
+            if (!clienteSelecionadoWpp) return;
+            mudarTom('gentil', document.querySelectorAll('.tone-btn')[0]);
+            document.getElementById('modalWpp').style.display = 'flex';
+        }
+
+        function mudarTom(tom, btn) {
+            document.querySelectorAll('.tone-btn').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            if (!clienteSelecionadoWpp) return;
+
+            const nome = clienteSelecionadoWpp.nome;
+            const venc = clienteSelecionadoWpp.diaVencimento;
+            const val = clienteSelecionadoWpp.valor === 'Padrão' ? '100,00' : clienteSelecionadoWpp.valor;
+            let msg = '';
+
+            if (tom === 'gentil') {
+                msg = `Olá ${nome}, tudo bem? Passando para lembrar que a sua mensalidade da Roma Telecom vence dia ${venc}/${mesSelecionado}.\n\nValor: R$ ${val}\n\n${pixUsuario}\n\nSe já efetuou o pagamento, favor desconsiderar.`;
+            } else if (tom === 'hoje') {
+                msg = `Olá ${nome}! Sua fatura da Roma Telecom vence hoje (dia ${venc}).\n\nValor: R$ ${val}\n\n${pixUsuario}\n\nEnvie o comprovante por aqui assim que pagar. Obrigado!`;
+            } else if (tom === 'cobranca') {
+                msg = `Aviso Importante: Constamos em aberto a mensalidade de ${mesSelecionado} referente ao cliente ${nome}.\n\nValor em aberto: R$ ${val}\n\n${pixUsuario}\n\nPor favor, evite a suspensão parcial do seu sinal efetuando o pagamento hoje.`;
+            } else if (tom === 'recibo') {
+                msg = `Obrigado pelo pagamento, ${nome}! Seu sinal está confirmado para o mês de ${mesSelecionado}.\n\nQualquer dúvida estamos à disposição!`;
+            }
+            document.getElementById('wppTexto').value = msg;
+        }
+
+        function enviarWhatsApp() {
+            if (!clienteSelecionadoWpp || !clienteSelecionadoWpp.telefone) return alert("Cliente sem telefone cadastrado!");
+            const texto = encodeURIComponent(document.getElementById('wppTexto').value);
+            const num = clienteSelecionadoWpp.telefone.replace(/\D/g, '');
+            window.open(`https://wa.me/55${num}?text=${texto}`, '_blank');
+            fecharModal('modalWpp');
+        }
+
+        function renderizarLista() {
+            const container = document.getElementById('lista');
+            if (!container) return;
+
+            let termoBusca = (document.getElementById('inputBusca')?.value || '').toLowerCase();
+            let listaFiltrada = clientes.filter(c => c.unidade === abaAtual);
+
+            // Atualiza contadores das abas e modais
+            const totalR1 = clientes.filter(c => c.unidade === 'Roma 1').length;
+            const totalR2 = clientes.filter(c => c.unidade === 'Roma 2').length;
+            const appR1 = clientes.filter(c => c.unidade === 'Roma 1' && c.usaApp).length;
+            const appR2 = clientes.filter(c => c.unidade === 'Roma 2' && c.usaApp).length;
+
+            if (document.getElementById('count-roma1')) document.getElementById('count-roma1').innerText = totalR1;
+            if (document.getElementById('count-roma2')) document.getElementById('count-roma2').innerText = totalR2;
+            if (document.getElementById('count-app-roma1')) document.getElementById('count-app-roma1').innerText = appR1;
+            if (document.getElementById('count-app-roma2')) document.getElementById('count-app-roma2').innerText = appR2;
+
+            if (document.getElementById('modal-count-r1')) document.getElementById('modal-count-r1').innerText = totalR1;
+            if (document.getElementById('modal-count-r2')) document.getElementById('modal-count-r2').innerText = totalR2;
+            if (document.getElementById('modal-app-r1')) document.getElementById('modal-app-r1').innerText = appR1;
+            if (document.getElementById('modal-app-r2')) document.getElementById('modal-app-r2').innerText = appR2;
+
+            calcularMetricasDinâmicas(listaFiltrada);
+
+            // Filtro por busca
+            if (termoBusca) {
+                listaFiltrada = listaFiltrada.filter(c => 
+                    (c.nome && c.nome.toLowerCase().includes(termoBusca)) || 
+                    (c.nomeCompleto && c.nomeCompleto.toLowerCase().includes(termoBusca)) ||
+                    (c.bairro && c.bairro.toLowerCase().includes(termoBusca))
+                );
+            }
+
+            // Filtros de Dashboard (Pendentes / Pagos)
+            if (filtroDashStatus === 'pendentes' || filtroRoma2Status === 'pendentes') {
+                listaFiltrada = listaFiltrada.filter(c => c.status !== 'Pago' && c.status !== 'Isento' && c.status !== 'Cancelado');
+            } else if (filtroDashStatus === 'pagos' || filtroRoma2Status === 'pagos') {
+                listaFiltrada = listaFiltrada.filter(c => c.status === 'Pago');
+            }
+
+            // Ordenação
+            if (ordemAtual === 'data') {
+                listaFiltrada.sort((a, b) => (a.diaVencimento || 0) - (b.diaVencimento || 0));
+            } else {
+                listaFiltrada.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+            }
+
+            const layoutAtual = localStorage.getItem('romaLayoutPref') || 'dashboard';
+            container.innerHTML = '';
+
+            if (listaFiltrada.length === 0) {
+                container.innerHTML = '<p style="text-align:center; padding: 30px; color: var(--text-muted);">Nenhum cliente encontrado.</p>';
+                return;
+            }
+
+            const hoje = new Date();
+            const indexMesAtual = hoje.getMonth();
+            const diaAtualReal = hoje.getDate();
+            const indexMesSelecionado = mesesDoAno.indexOf(mesSelecionado);
+
+            listaFiltrada.forEach(c => {
+                let statusEfetivo = c.status || 'Pendente';
+                if (statusEfetivo === 'Pendente') {
+                    if (indexMesSelecionado < indexMesAtual) statusEfetivo = 'Vencido';
+                    else if (indexMesSelecionado === indexMesAtual && diaAtualReal > c.diaVencimento) statusEfetivo = 'Vencido';
+                }
+
+                const badgeApp = c.usaApp ? '<span class="app-badge"><i class="fa-solid fa-tv"></i> IPTV</span>' : '';
+                const badgePlano = `<span class="plano-badge badge-premium">${c.plano || 'Personalizado'}</span>`;
+
+                if (layoutAtual === 'roma2') {
+                    const card = document.createElement('div');
+                    card.className = 'r2-client-card';
+                    card.innerHTML = `
+                        <div class="r2-card-top">
+                            <div class="r2-c-left">
+                                <div class="r2-avatar">${c.diaVencimento || '0'}</div>
+                                <div class="r2-c-info">
+                                    <h4>${c.nome} ${badgeApp}</h4>
+                                    <p><i class="fa-solid fa-location-dot"></i> ${c.bairro || c.rua || 'Sem Endereço'}</p>
+                                    ${c.logPagamento ? `<div class="log-pagamento">${c.logPagamento}</div>` : ''}
+                                    ${c.valorAtrasado ? `<div class="r2-divida-badge" onclick="abrirModalPagamento('${c.id}', true)">⚠️ Dívida ${c.mesAtrasado}: R$ ${c.valorAtrasado}</div>` : ''}
+                                </div>
+                            </div>
+                            <div class="r2-c-right">
+                                <h3>R$ ${c.valor || '100,00'}</h3>
+                                <span class="r2-badge ${statusEfetivo.toLowerCase()}" onclick="abrirModalPagamento('${c.id}', false)">${statusEfetivo.toUpperCase()}</span>
+                            </div>
+                        </div>
+                        <div class="r2-card-bottom">
+                            <button class="r2-btn-action wpp" onclick="abrirModalWpp('${c.id}')"><i class="fa-brands fa-whatsapp"></i> Cobrar</button>
+                            ${c.status === 'Pago' ? `<button class="r2-btn-action pdf" onclick="gerarReciboDireto('${c.id}')"><i class="fa-solid fa-file-pdf"></i> Recibo</button>` : ''}
+                            <button class="r2-btn-action ia" onclick="abrirModalCliente('${c.id}')"><i class="fa-solid fa-pen"></i> Editar</button>
+                            <button class="r2-btn-action del" onclick="deletarDireto('${c.id}')"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                } else {
+                    const card = document.createElement('div');
+                    card.className = `card ${statusEfetivo.toLowerCase()}`;
+                    card.innerHTML = `
+                        <div class="card-left">
+                            <div class="date-badge">${c.diaVencimento || '0'}</div>
+                            <div class="info">
+                                <h3>${c.nome} ${badgeApp}</h3>
+                                <p>${badgePlano} <span><i class="fa-solid fa-location-dot"></i> ${c.bairro || 'Sem Bairro'}</span></p>
+                                ${c.logPagamento ? `<div class="log-pagamento">${c.logPagamento}</div>` : ''}
+                                ${c.valorAtrasado ? `<div class="log-pagamento log-parcial" style="cursor:pointer;" onclick="abrirModalPagamento('${c.id}', true)">⚠️ Devendo ${c.mesAtrasado}: R$ ${c.valorAtrasado}</div>` : ''}
+                            </div>
+                        </div>
+                        <div class="card-right">
+                            <div class="card-price">R$ ${c.valor || '100,00'}</div>
+                            <span class="status-badge ${statusEfetivo.toLowerCase()}" onclick="abrirModalPagamento('${c.id}', false)">${statusEfetivo.toUpperCase()}</span>
+                            <div class="actions">
+                                <button class="action-btn btn-wpp" onclick="abrirModalWpp('${c.id}')"><i class="fa-brands fa-whatsapp"></i></button>
+                                ${c.status === 'Pago' ? `<button class="action-btn btn-pdf" onclick="gerarReciboDireto('${c.id}')"><i class="fa-solid fa-file-pdf"></i></button>` : ''}
+                                <button class="action-btn btn-edit" onclick="abrirModalCliente('${c.id}')"><i class="fa-solid fa-pen"></i></button>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                }
+            });
+        }
+    </script>
+</body>
+</html>
 
             let progress = 0; let divisorProgress = countPagos + countPendentes + countVencidos;
             if(divisorProgress > 0) progress = (countPagos / divisorProgress) * 100;
